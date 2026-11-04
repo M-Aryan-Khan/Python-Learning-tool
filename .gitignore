@@ -1,0 +1,32 @@
+# ---- Copyrighted / private source material (never publish) ----
+# Text extracted from the Pearson booklets and the school planner
+tools/source/
+# Any PDFs or page images of past papers / the textbook
+*.pdf
+*.png.tmp
+
+# ---- Local tooling and editor files ----
+.claude/
+.vscode/
+.idea/
+*.swp
+*.tmp
+_*.tmp
+
+# ---- Generated while verifying lessons ----
+work/
+__pycache__/
+*.pyc
+node_modules/
+npm-debug.log*
+
+# ---- Hosting ----
+.vercel/
+
+# ---- OS junk ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# NOTE: vendor/ (Pyodide, CodeMirror, fonts) is intentionally NOT ignored:
+# the site needs it to run offline and on Vercel.

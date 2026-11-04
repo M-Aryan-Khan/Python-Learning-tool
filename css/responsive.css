@@ -1,0 +1,203 @@
+/* =====================================================================
+   RESPONSIVE LAYER (loaded after style.css)
+   > 1100 desktop | <= 1100 small laptop / tablet landscape |
+   <= 900 tablet portrait + phones: two-row header and drawer sidebar |
+   <= 600 phones | <= 380 small phones
+   ===================================================================== */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overflow-x: hidden; }
+img, svg, video { max-width: 100%; }
+a.btn { text-decoration: none; }
+pre, code { overflow-wrap: anywhere; }
+.top { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+.backdrop { display: none; }
+.symbar { display: none; }
+
+/* ---- small laptops / tablets landscape ---- */
+@media (max-width: 1100px) {
+  :root { --side-w: 264px; }
+  .main { padding: 34px 32px 110px; }
+  .brand small { display: none; }
+  .top { gap: 16px; }
+  .play { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 40px; }
+}
+
+/* ---- tablet portrait and below: two-row header, drawer sidebar ---- */
+@media (max-width: 900px) {
+  .top { flex-wrap: wrap; height: auto; min-height: var(--top-h); padding-top: 8px; padding-bottom: 0; gap: 4px 14px; align-items: center; }
+  .brand { order: 1; font-size: 18px; }
+  .top-right { order: 2; margin-left: auto; }
+  .menu-btn { order: 0; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 14px; font-weight: 500; min-height: 36px; }
+  .topnav { order: 4; flex: 1 1 100%; overflow-x: auto; gap: 2px; padding: 4px 0 8px; margin: 0 -4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .topnav::-webkit-scrollbar { display: none; }
+  .topnav a { flex: none; padding: 8px 14px; font-size: 15px; }
+  .top-right .hide-s { display: none; }
+
+  .side {
+    position: fixed; left: 0; top: var(--top-h); bottom: 0; height: auto; z-index: 25;
+    width: min(86vw, 330px); transform: translateX(-102%); transition: transform .22s ease;
+    box-shadow: none; padding-bottom: 60px; -webkit-overflow-scrolling: touch;
+  }
+  body.menu-open .side { transform: none; box-shadow: 6px 0 28px rgba(0, 0, 0, .14); }
+  .backdrop { display: block; position: fixed; inset: var(--top-h) 0 0 0; background: rgba(20, 24, 28, .4); z-index: 24; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  body.menu-open .backdrop { opacity: 1; pointer-events: auto; }
+  body.menu-open { overflow: hidden; }
+  .side-lessons a { padding: 9px 10px; }
+  .side-mod > button { padding: 11px 10px; }
+
+  .main { padding: 28px 22px 100px; }
+  .page, .page.wide { max-width: 100%; }
+}
+
+/* ---- phones ---- */
+@media (max-width: 600px) {
+  .top { padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); }
+  .main { padding: 22px max(16px, env(safe-area-inset-left)) 90px max(16px, env(safe-area-inset-right)); }
+  h1 { font-size: 27px; }
+  h2 { font-size: 21px; margin: 40px 0 12px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  .lede { font-size: 17px; }
+  .hero { padding-top: 6px; }
+  .hero h1 { font-size: 32px; max-width: none; }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+  .grid2 { grid-template-columns: 1fr; gap: 4px; }
+  .mods { grid-template-columns: 1fr; }
+  .pill { padding: 3px 9px; font-size: 12px; }
+  #pystate span:last-child { max-width: 108px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lesson-head { padding-bottom: 20px; }
+  .progress-line { flex-wrap: wrap; gap: 6px 12px; }
+  .bar { max-width: none; flex: 1 1 100%; }
+
+  .note { padding: 11px 13px; margin: 16px 0; }
+  .tbl { margin: 14px -4px; }
+  th, td { padding: 7px 9px; font-size: 14.5px; }
+
+  .card { margin: 16px -6px; border-radius: 6px; }
+  .card .CodeMirror { font-size: 14px; }
+  .card .CodeMirror-linenumber { padding: 0 6px 0 2px; font-size: 11px; }
+  .CodeMirror pre.CodeMirror-line { padding-left: 4px; }
+  .tools { padding: 8px; gap: 6px; }
+  .tools .btn { flex: 1 1 auto; justify-content: center; }
+  .tools .sp { margin-left: 0; flex: 1 1 100%; }
+  .tools .sel { flex: 1 1 100%; }
+  .card-head { flex-wrap: wrap; gap: 2px 10px; padding: 8px 12px; }
+  .console pre { padding: 10px 12px; font-size: 13.5px; max-height: 340px; }
+  .console .stdin { min-width: 90px; font-size: 16px; }
+  .errbox { padding: 10px 12px; font-size: 14.5px; }
+  .errbox .eline { font-size: 12.5px; }
+  .filebox .f { padding: 8px 10px; }
+
+  .trace-ctl { gap: 6px; padding: 8px; }
+  .trace-ctl input[type=range] { flex: 1 1 100%; order: 9; }
+  .trace-ctl .info { flex: 1 1 100%; order: 10; }
+  .trace-vars > div { padding: 9px 12px; }
+  .tt-wrap { max-height: 300px; }
+
+  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0 -2px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: none; padding: 9px 13px; }
+  .case-intro { padding: 10px 12px 2px; font-size: 14.5px; }
+
+  .act { margin: 22px -6px; border-radius: 6px; }
+  .act-head { flex-wrap: wrap; padding: 9px 12px; gap: 4px 10px; }
+  .act-head .lvl { margin-left: 0; }
+  .act-body { padding: 14px 12px 4px; }
+  .act-actions { padding: 4px 12px 12px; }
+  .act-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .feedback, .hintbox, .solbox { margin-left: 12px; margin-right: 12px; }
+  .tests .d { font-size: 12.5px; overflow-x: auto; }
+  .opts label { padding: 11px 12px; }
+  .sortrow { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 12px; }
+  .sortrow select { width: 100%; min-height: 40px; font-size: 16px; }
+  textarea.ans, input.ans { font-size: 16px; }
+  .pline { padding: 4px 6px; font-size: 13px; }
+  .pline .mv button { width: 34px; height: 34px; }
+  .tt-edit input { font-size: 16px; min-width: 64px; padding: 6px 4px; }
+
+  .flow { margin: 20px -6px; }
+  .viz { margin: 20px -6px; }
+  .viz-body { padding: 12px; }
+  .vopts { gap: 8px 12px; }
+  .vin { font-size: 16px; max-width: 100%; }
+  .vf { flex: 1 1 100%; justify-content: space-between; }
+  .vf { min-width: 0; gap: 8px; }
+  .vf .vin { flex: 1 1 auto; min-width: 0; width: 0; max-width: 70%; }
+  .vf input[type=range] { min-width: 0; width: 0; flex: 1 1 auto; }
+  .vctl .btn { flex: 1 1 auto; justify-content: center; }
+  .vctl input[type=range] { flex: 1 1 100%; order: 9; }
+  .vc { min-width: 44px; }
+  .vc b { padding: 8px 4px; font-size: 14px; }
+  .vbits { gap: 4px; flex-wrap: nowrap; }
+  .vbit { width: auto; flex: 1 1 0; min-width: 0; }
+  .vbit b { font-size: 18px; }
+  .vgrid { overflow-x: auto; max-width: 100%; }
+  .vside { grid-template-columns: 1fr; gap: 12px; }
+  .valpha span { width: 22px; font-size: 12px; }
+  .vres2 { font-size: 17px; }
+  .vgi { padding: 4px 7px; }
+
+  .prev-next { flex-direction: column; margin-top: 44px; }
+  .pn.next { text-align: left; }
+  .pn.disabled { display: none; }
+
+  .play .CodeMirror { min-height: 260px; }
+  .pf input.fname { width: 70%; font-size: 16px; }
+  .pf textarea { font-size: 16px; }
+  .refnav a { padding: 7px 12px; }
+}
+
+@media (max-width: 380px) {
+  .brand { font-size: 16.5px; }
+  #pystate span:last-child { max-width: 78px; }
+  h1 { font-size: 24px; }
+  .hero h1 { font-size: 28px; }
+  .card .CodeMirror { font-size: 13px; }
+}
+
+/* ---- tables that turn into stacked cards on narrow screens ---- */
+@media (max-width: 720px) {
+  table.stack-sm, table.stack-sm tbody, table.stack-sm tr, table.stack-sm td { display: block; width: 100%; }
+  table.stack-sm thead { display: none; }
+  table.stack-sm tr { border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin: 0 0 10px; background: var(--bg); }
+  table.stack-sm td { border: 0; border-bottom: 1px dashed var(--line); padding: 7px 0; white-space: normal !important; width: auto !important; }
+  table.stack-sm td:last-child { border-bottom: 0; }
+  table.stack-sm td[data-label]::before { content: attr(data-label); display: block; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 1px; }
+  table.stack-sm td.hide-s { display: none; }
+}
+
+/* ---- touch devices: bigger targets and a symbol bar for typing code ---- */
+@media (hover: none) and (pointer: coarse) {
+  .btn { min-height: 42px; }
+  .btn.small { min-height: 38px; padding: 6px 12px; }
+  .tabs button, .refnav a, .side-lessons a { min-height: 42px; }
+  .opts label { min-height: 46px; }
+  .vbit, .vcell { min-height: 46px; }
+  input[type=range] { min-height: 28px; }
+  .CodeMirror textarea { font-size: 16px !important; }
+  .symbar { display: flex; gap: 5px; overflow-x: auto; padding: 6px 8px; background: var(--panel); border-top: 1px solid var(--line); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .symbar::-webkit-scrollbar { display: none; }
+  .symbar button { flex: none; min-width: 40px; height: 38px; border: 1px solid var(--line-2); border-radius: 6px; background: #fff; font-family: var(--mono); font-size: 16px; color: var(--ink); touch-action: manipulation; }
+  .symbar button:active { background: var(--accent-soft); }
+  .symbar .wide { padding: 0 12px; font-family: var(--sans); font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* ---- animation controls on small screens (fixes collapsed inputs) ---- */
+@media (max-width: 600px) {
+  .an-controls { gap: 10px 10px; align-items: flex-end; }
+  .an-controls label.vf { flex: 1 1 96px; min-width: 0; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 3px; }
+  .an-controls label.vf:has(textarea) { flex: 1 1 100%; }
+  .an-controls label.vf .vin,
+  .an-controls label.vf input[type=text],
+  .an-controls label.vf select,
+  .an-controls label.vf textarea { width: 100%; max-width: none; min-width: 0; flex: none; box-sizing: border-box; }
+  .an-controls label.vf-inline { flex: 1 1 100%; flex-direction: row; align-items: center; justify-content: flex-start; }
+  .an-controls > .btn, .an-controls > select { flex: 1 1 100%; }
+  .an-ta { min-width: 0; }
+  .an-ops-wrap { flex: 1 1 100%; }
+  .an-ops .btn { flex: 1 1 auto; justify-content: center; }
+}
