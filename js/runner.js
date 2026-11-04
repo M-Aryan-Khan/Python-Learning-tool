@@ -20,7 +20,7 @@ PP.runner = (function () {
   function start() {
     setState('loading');
     readyP = new Promise((res) => { readyResolve = res; });
-    worker = new Worker('js/pyworker.js?v=17');
+    worker = new Worker('js/pyworker.js?v=19');
     worker.onmessage = (e) => {
       const m = e.data;
       if (m.type === 'ready') { setState('ready'); readyResolve(); }

@@ -36,3 +36,15 @@ node tools/verify.js
 ```
 
 It fails if a model answer does not pass its own tests, if a starter already passes, or if an example crashes unexpectedly.
+
+## SEO and link previews
+
+After the first deploy (and whenever the address changes), tell the site its real address and rebuild:
+
+```
+node tools/build-seo.js https://your-site.vercel.app
+```
+
+This rewrites the meta tags in `index.html`, creates one crawlable page per lesson in `learn/`, and regenerates
+`sitemap.xml`, `robots.txt` and `site.webmanifest`. Run `node tools/build-seo.js` again after editing lessons, then commit.
+The share image is `og-image.png` (1200 x 630).

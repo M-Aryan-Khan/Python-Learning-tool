@@ -4,6 +4,9 @@
   const view = document.getElementById('view');
   const side = document.getElementById('side');
   const openMods = new Set();
+  const descEl = document.querySelector('meta[name="description"]');
+  const DEFAULT_DESC = descEl ? descEl.content : '';
+  const setDesc = (t) => { if (descEl) descEl.content = (t || DEFAULT_DESC).slice(0, 300); };
 
   /* ---------- runner status pill ---------- */
   PP.onRunnerState((s, msg) => {
@@ -122,6 +125,12 @@
     if (l.time) chips.append(h('span', { class: 'chip' }, l.time));
     if (l.book) chips.append(h('span', { class: 'chip book' }, 'Textbook ' + l.book));
     if (l.exam) chips.append(h('span', { class: 'chip' }, 'Exam: ' + l.exam));
+    const shareBtn = h('button', { class: 'chip share', title: 'Copy a link that shows a preview card when shared', onclick: () => {
+      const link = location.origin + '/learn/' + l.id + '/';
+      const done = () => { shareBtn.textContent = 'Link copied'; setTimeout(() => { shareBtn.textContent = 'Copy share link'; }, 1800); };
+      try { navigator.clipboard.writeText(link).then(done, () => window.prompt('Copy this link:', link)); } catch (e) { window.prompt('Copy this link:', link); }
+    } }, 'Copy share link');
+    chips.append(shareBtn);
     const prog = h('div', { class: 'progress-line' });
     page.append(h('header', { class: 'lesson-head' },
       h('div', { class: 'eyebrow' }, `Module ${String(mi).padStart(2, '0')} · ${m.title}`),
@@ -147,7 +156,8 @@
     PP._lessonUpdate = updateProg;
     window.scrollTo(0, 0);
     buildSide(id);
-    document.title = `${l.title} · Python Path`;
+    document.title = `${l.title} · By Sir Aryan`;
+    setDesc(`${l.title}: ${l.summary || ''}. ${String(l.intro || '').replace(/`/g, '').replace(/<[^>]+>/g, '')}`);
   }
   PP.store.onChange(() => { if (PP._lessonUpdate && /#\/learn\//.test(location.hash)) PP._lessonUpdate(); });
 
@@ -196,7 +206,7 @@
           h('div', { class: 'card' }, h('div', { class: 'card-head' }, h('span', { class: 'ttl' }, 'Text files'), h('span', { class: 'sub' }, 'for open()'), h('button', { class: 'btn small sp', onclick: () => { state.files.push({ name: 'data' + (state.files.length + 1) + '.txt', content: '' }); drawFiles(); persist(); } }, 'Add file')), filesBox))));
     view.replaceChildren(page);
     card.refresh();
-    document.title = 'Playground · Python Path';
+    document.title = 'Playground · By Sir Aryan';
   }
 
   /* ---------- past-paper finder ---------- */
@@ -239,7 +249,7 @@
       h('div', { class: 'tbl' }, h('table', { class: 'stack-sm' }, h('thead', null, h('tr', null, ['Session / question', 'What it asks', 'Booklet', 'Learn first', 'Practise'].map((x) => h('th', null, x)))), body)));
     view.replaceChildren(page);
     draw();
-    document.title = 'Past papers · Python Path';
+    document.title = 'Past papers · By Sir Aryan';
   }
 
   /* ---------- animations / explainers gallery ---------- */
@@ -259,7 +269,7 @@
       });
     });
     view.replaceChildren(page);
-    document.title = 'Animations · Python Path';
+    document.title = 'Animations · By Sir Aryan';
   }
 
   /* ---------- reference ---------- */
@@ -271,7 +281,7 @@
       h('div', { class: 'refnav' }, items.map((r) => h('a', { href: '#/ref/' + r.id, class: r === cur ? 'on' : '' }, r.title))));
     if (cur) { const mount = h('div'); page.append(mount); const rf = PP.ui.renderBlocks({ id: 'ref-' + cur.id, blocks: cur.blocks }, mount); view.replaceChildren(page); rf(); }
     else view.replaceChildren(page);
-    document.title = 'Reference · Python Path';
+    document.title = 'Reference · By Sir Aryan';
   }
 
   /* ---------- header height, drawer, backdrop ---------- */
@@ -293,6 +303,7 @@
   /* ---------- router ---------- */
   function renderRoute() {
     PP.ui.editors.length = 0;
+    setDesc();
     const hash = location.hash || '#/';
     const r = hash.split('/');
     const area = r[1] || '';
@@ -302,12 +313,12 @@
     side.style.display = hasSide ? '' : 'none';
     document.getElementById('menuBtn').style.display = hasSide ? '' : 'none';
     if (area === 'learn' && r[2]) renderLesson(decodeURIComponent(r[2]));
-    else if (area === 'learn') { renderCourse(); document.title = 'Lessons · Python Path'; }
+    else if (area === 'learn') { renderCourse(); document.title = 'Lessons · By Sir Aryan'; }
     else if (area === 'play') renderPlay();
     else if (area === 'papers') renderPapers();
     else if (area === 'explore') renderExplore();
     else if (area === 'ref') renderRef(r[2]);
-    else { renderHome(); document.title = 'Python Path · Edexcel IGCSE Computer Science'; }
+    else { renderHome(); document.title = 'Python Path · By Sir Aryan'; }
     if (area !== 'learn' || !r[2]) window.scrollTo(0, 0);
     updateOverall();
   }

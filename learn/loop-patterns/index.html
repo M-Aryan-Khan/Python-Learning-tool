@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loop patterns: totals, counts, max and more · By Sir Aryan</title>
+<meta name="description" content="Loop patterns: totals, counts, max and more: Accumulator, counter, average, max/min, factorial, digit sum. Most loops in exam programs follow a few…">
+<meta name="keywords" content="learn Python, Python for beginners, Edexcel International GCSE Computer Science, IGCSE Python, Paper 2 practical, Python lessons, Python exercises, past paper practice, Year 10 computer science, Beacon Light Academy">
+<meta name="author" content="Sir Aryan">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light">
+<link rel="canonical" href="https://YOUR-SITE.vercel.app/learn/loop-patterns/">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta property="og:site_name" content="Python Path">
+<meta property="og:locale" content="en_GB">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Loop patterns: totals, counts, max and more · By Sir Aryan">
+<meta property="og:description" content="Loop patterns: totals, counts, max and more: Accumulator, counter, average, max/min, factorial, digit sum. Most loops in exam programs follow a few…">
+<meta property="og:url" content="https://YOUR-SITE.vercel.app/learn/loop-patterns/">
+<meta property="og:image" content="https://YOUR-SITE.vercel.app/og-image.png">
+<meta property="og:image:secure_url" content="https://YOUR-SITE.vercel.app/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Learn Python by Sir Aryan: specially crafted for Beacon Light Academy. A code editor showing a Python loop and its output.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Loop patterns: totals, counts, max and more · By Sir Aryan">
+<meta name="twitter:description" content="Loop patterns: totals, counts, max and more: Accumulator, counter, average, max/min, factorial, digit sum. Most loops in exam programs follow a few…">
+<meta name="twitter:image" content="https://YOUR-SITE.vercel.app/og-image.png">
+<meta name="twitter:image:alt" content="Learn Python by Sir Aryan: specially crafted for Beacon Light Academy.">
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"LearningResource","@id":"https://YOUR-SITE.vercel.app/learn/loop-patterns/#lesson","name":"Loop patterns: totals, counts, max and more","description":"Loop patterns: totals, counts, max and more: Accumulator, counter, average, max/min, factorial, digit sum. Most loops in exam programs follow a few…","url":"https://YOUR-SITE.vercel.app/learn/loop-patterns/","inLanguage":"en-GB","learningResourceType":"Lesson","educationalLevel":"Edexcel International GCSE","teaches":"Accumulator, counter, average, max/min, factorial, digit sum","timeRequired":"PT40M","isAccessibleForFree":true,"author":{"@type":"Person","name":"Sir Aryan"},"isPartOf":{"@id":"https://YOUR-SITE.vercel.app/#course"},"image":"https://YOUR-SITE.vercel.app/og-image.png"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Python Path","item":"https://YOUR-SITE.vercel.app/"},{"@type":"ListItem","position":2,"name":"Iteration (loops)","item":"https://YOUR-SITE.vercel.app/learn/while-loops/"},{"@type":"ListItem","position":3,"name":"Loop patterns: totals, counts, max and more","item":"https://YOUR-SITE.vercel.app/learn/loop-patterns/"}]}]}</script>
+<style>
+body{margin:0;background:#fff;color:#16181c;font:16px/1.65 "IBM Plex Sans",system-ui,sans-serif}
+.w{max-width:760px;margin:0 auto;padding:36px 22px 80px}
+.top{border-bottom:1px solid #e2e3e0;padding:14px 22px;font-family:"IBM Plex Serif",Georgia,serif;font-weight:600;font-size:19px}
+.top a{color:#16181c;text-decoration:none}.top small{font:400 13px "IBM Plex Sans",sans-serif;color:#7b818b;margin-left:10px}
+.eb{font-size:12.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#0e5a63}
+h1{font-family:"IBM Plex Serif",Georgia,serif;font-size:34px;line-height:1.2;margin:10px 0 8px}
+h2{font-family:"IBM Plex Serif",Georgia,serif;font-size:21px;margin:34px 0 8px}
+.lede{font-size:18px;color:#494e56}
+.btn{display:inline-block;background:#0e5a63;color:#fff;padding:11px 22px;border-radius:6px;text-decoration:none;font-weight:500;margin:18px 0}
+ul{padding-left:22px}a{color:#0e5a63}
+.pn{display:flex;justify-content:space-between;gap:16px;margin-top:46px;padding-top:22px;border-top:1px solid #e2e3e0;flex-wrap:wrap}
+.meta{color:#7b818b;font-size:14px}</style>
+</head>
+<body>
+<div class="top"><a href="/">Python Path</a><small>By Sir Aryan · for Beacon Light Academy</small></div>
+<main class="w">
+<div class="eb">Module 03 · Iteration (loops)</div>
+<h1>Loop patterns: totals, counts, max and more</h1>
+<p class="lede">Most loops in exam programs follow a few standard shapes. Learn each pattern once and you can adapt it to any scenario.</p>
+<p class="meta">40 min · Textbook Ch 2 · p.74-78 · Exam: Paper 2 Q3-Q6</p>
+<a class="btn" id="open" href="/#/learn/loop-patterns">Open the interactive lesson</a>
+<h2>In this lesson</h2>
+<ul><li>Accumulator: a running total</li><li>Counter and average</li><li>Largest and smallest</li><li>Products, powers and factorials</li><li>Tables and digits</li><li>Check your understanding</li></ul>
+<p class="meta">5 coding exercises · 2 predict-the-output tasks · 2 quick checks. Run real Python right in your browser.</p>
+<nav class="pn" aria-label="Lessons">
+<a href="/learn/for-loops/">← for loops and range()</a>
+<a href="/">All lessons</a>
+<a href="/learn/nested-loops/">Loops inside loops →</a>
+</nav>
+</main>
+<script>if(!/bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|preview|embed|linkedin|twitter|discord|slack|google|bing|yandex|baidu|duckduck/i.test(navigator.userAgent)){location.replace("/#/learn/loop-patterns");}</script>
+</body>
+</html>
