@@ -1,0 +1,98 @@
+/* =====================================================================
+   DARK THEME
+   Applied with <html data-theme="dark">. Warm-neutral charcoal (not blue-black),
+   one soft teal accent, the same clay and green signal colours as the light theme,
+   all text at WCAG AA contrast or better.
+   ===================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14171a;
+  --surface: #1c2024;
+  --panel: #1a1d21;
+  --panel-2: #262a30;
+  --ink: #e8e9eb;
+  --ink-2: #b5bac1;
+  --ink-3: #868d97;
+  --line: #2a2f35;
+  --line-2: #3b4149;
+  --accent: #5ab9c5;
+  --accent-soft: #15343a;
+  --accent-btn: #1f7f8c;
+  --accent-hover: #2793a1;
+  --accent-ink: #ffffff;
+  --ok: #62b883;
+  --ok-soft: #15301f;
+  --ok-line: #2b5a3d;
+  --ok-ink: #aadfbd;
+  --bad: #f2897f;
+  --bad-soft: #3a1d1b;
+  --bad-line: #6a3331;
+  --bad-ink: #f7bab5;
+  --warn: #e5b65c;
+  --warn-soft: #2e2713;
+  --warn-line: #8c6c1d;
+  --code-bg: #181b1f;
+  --hl: #4a3f14;
+  --hl-soft: #272213;
+  --hl-strong: #b08a1c;
+  --hover: #1f2428;
+  --sel: rgba(90, 185, 197, .3);
+  --activeline: rgba(90, 185, 197, .07);
+  --syn-kw: #63c4d0;
+  --syn-builtin: #a3b9e2;
+  --syn-str: #e6a86d;
+  --syn-num: #7bb9e3;
+  --syn-cm: #7f8691;
+  --shadow: rgba(0, 0, 0, .5);
+  --scrim: rgba(0, 0, 0, .55);
+}
+:root[data-theme="dark"] .an {
+  --act: #5ab9c5; --act-soft: #15363c;
+  --swp: #ee9068; --swp-soft: #40261a;
+  --done: #62b883; --done-soft: #16321f;
+  --dim: #5a626c;
+}
+:root[data-theme="dark"] a:hover { color: #8fd6df; }
+:root[data-theme="dark"] .CodeMirror-matchingbracket { background: #2c4b50; }
+:root[data-theme="dark"] .CodeMirror-selected { background: var(--sel) !important; }
+:root[data-theme="dark"] .card .CodeMirror,
+:root[data-theme="dark"] .card .CodeMirror-gutters { background: var(--code-bg); }
+:root[data-theme="dark"] .CodeMirror-cursor { border-left-color: var(--accent); }
+:root[data-theme="dark"] .vbit.on i { color: #cfe9ed; }
+:root[data-theme="dark"] .topnav a:hover { color: var(--ink); }
+:root[data-theme="dark"] .side-lessons a.on { color: var(--accent); }
+:root[data-theme="dark"] .tick.done::after { border-color: #0f1a13; }
+:root[data-theme="dark"] .note.warn .nt { color: var(--warn); }
+:root[data-theme="dark"] .feedback.ok { color: var(--ok-ink); }
+:root[data-theme="dark"] .feedback.bad { color: var(--bad-ink); }
+:root[data-theme="dark"] .hero-school { background: var(--surface); }
+:root[data-theme="dark"] .vcell.swap, :root[data-theme="dark"] .vc.swap b { background: var(--hl); border-color: var(--hl-strong); color: var(--ink); }
+:root[data-theme="dark"] .cm-trace-line { background: var(--hl) !important; }
+:root[data-theme="dark"] .cm-err-line { background: var(--bad-soft) !important; }
+:root[data-theme="dark"] .tt-wrap td.chg, :root[data-theme="dark"] .vartbl tr.chg td { color: var(--ink); }
+:root[data-theme="dark"] .k-bar { background: var(--panel-2); }
+:root[data-theme="dark"] .an-stage { background: var(--surface); }
+:root[data-theme="dark"] .an-sw { background: var(--surface); }
+:root[data-theme="dark"] .s-cmp, :root[data-theme="dark"] .s-swp, :root[data-theme="dark"] .s-done, :root[data-theme="dark"] .s-found { color: var(--ink) !important; }
+:root[data-theme="dark"] .s-cmp { color: var(--act) !important; }
+:root[data-theme="dark"] .s-swp { color: var(--swp) !important; }
+:root[data-theme="dark"] .s-done { color: var(--ok-ink) !important; }
+:root[data-theme="dark"] .s-out { color: var(--ink-3) !important; }
+:root[data-theme="dark"] .s-bad { color: var(--bad) !important; }
+:root[data-theme="dark"] .k-var.s-chg, :root[data-theme="dark"] .k-var.s-new { background: var(--surface) !important; color: var(--ink) !important; }
+:root[data-theme="dark"] .an-cl.on { background: var(--accent-soft); }
+:root[data-theme="dark"] .fc-s { fill: var(--surface); }
+:root[data-theme="dark"] select, :root[data-theme="dark"] input, :root[data-theme="dark"] textarea { color: var(--ink); }
+:root[data-theme="dark"] input::placeholder, :root[data-theme="dark"] textarea::placeholder { color: var(--ink-3); }
+:root[data-theme="dark"] ::selection { background: rgba(90, 185, 197, .35); color: #fff; }
+:root[data-theme="dark"] img { opacity: .95; }
+
+/* theme toggle in the header */
+.theme-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; padding: 0; flex: none; }
+.theme-btn:hover { color: var(--accent); border-color: var(--accent); }
+.theme-btn svg { width: 17px; height: 17px; }
+@media (max-width: 900px) { .theme-btn { width: 36px; height: 36px; } }
+
+/* a short, calm cross-fade when switching (not on first paint) */
+html.theme-anim, html.theme-anim body, html.theme-anim .top, html.theme-anim .side, html.theme-anim .card, html.theme-anim .act, html.theme-anim .viz, html.theme-anim .note { transition: background-color .25s ease, color .25s ease, border-color .25s ease; }
+@media (prefers-reduced-motion: reduce) { html.theme-anim * { transition: none !important; } }

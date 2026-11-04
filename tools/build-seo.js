@@ -54,7 +54,7 @@ function head({ title, desc, canonical, type, jsonld, extra }) {
 <meta name="author" content="${esc(AUTHOR)}">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <meta name="theme-color" content="#ffffff">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <link rel="canonical" href="${canonical}">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -130,6 +130,7 @@ fs.writeFileSync(path.join(root, 'index.html'), idx);
 
 /* ---------- 2. one page per lesson ---------- */
 const lessonCss = `
+@media (prefers-color-scheme: dark){body{background:#14171a;color:#e8e9eb}.top{border-color:#2a2f35}.top a{color:#e8e9eb}.eb,a{color:#5ab9c5}.lede{color:#b5bac1}.meta,.top small{color:#868d97}.pn{border-color:#2a2f35}.btn{background:#1f7f8c;color:#fff}}
 body{margin:0;background:#fff;color:#16181c;font:16px/1.65 "IBM Plex Sans",system-ui,sans-serif}
 .w{max-width:760px;margin:0 auto;padding:36px 22px 80px}
 .top{border-bottom:1px solid #e2e3e0;padding:14px 22px;font-family:"IBM Plex Serif",Georgia,serif;font-weight:600;font-size:19px}

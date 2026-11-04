@@ -39,8 +39,8 @@ pre, code { overflow-wrap: anywhere; }
     width: min(86vw, 330px); transform: translateX(-102%); transition: transform .22s ease;
     box-shadow: none; padding-bottom: 60px; -webkit-overflow-scrolling: touch;
   }
-  body.menu-open .side { transform: none; box-shadow: 6px 0 28px rgba(0, 0, 0, .14); }
-  .backdrop { display: block; position: fixed; inset: var(--top-h) 0 0 0; background: rgba(20, 24, 28, .4); z-index: 24; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  body.menu-open .side { transform: none; box-shadow: 6px 0 28px var(--shadow); }
+  .backdrop { display: block; position: fixed; inset: var(--top-h) 0 0 0; background: var(--scrim); z-index: 24; opacity: 0; pointer-events: none; transition: opacity .2s; }
   body.menu-open .backdrop { opacity: 1; pointer-events: auto; }
   body.menu-open { overflow: hidden; }
   .side-lessons a { padding: 9px 10px; }
@@ -177,7 +177,7 @@ pre, code { overflow-wrap: anywhere; }
   .CodeMirror textarea { font-size: 16px !important; }
   .symbar { display: flex; gap: 5px; overflow-x: auto; padding: 6px 8px; background: var(--panel); border-top: 1px solid var(--line); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .symbar::-webkit-scrollbar { display: none; }
-  .symbar button { flex: none; min-width: 40px; height: 38px; border: 1px solid var(--line-2); border-radius: 6px; background: #fff; font-family: var(--mono); font-size: 16px; color: var(--ink); touch-action: manipulation; }
+  .symbar button { flex: none; min-width: 40px; height: 38px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--surface); font-family: var(--mono); font-size: 16px; color: var(--ink); touch-action: manipulation; }
   .symbar button:active { background: var(--accent-soft); }
   .symbar .wide { padding: 0 12px; font-family: var(--sans); font-size: 13px; }
 }

@@ -8,6 +8,37 @@
   const DEFAULT_DESC = descEl ? descEl.content : '';
   const setDesc = (t) => { if (descEl) descEl.content = (t || DEFAULT_DESC).slice(0, 300); };
 
+
+  /* ---------- light / dark theme ---------- */
+  const themeBtn = document.getElementById('themeBtn');
+  const ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>';
+  const ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  function storedTheme() { try { const t = localStorage.getItem('pp.theme'); return t === 'light' || t === 'dark' ? t : null; } catch (e) { return null; } }
+  function applyTheme(t, animate) {
+    const root = document.documentElement;
+    if (animate) { root.classList.add('theme-anim'); setTimeout(() => root.classList.remove('theme-anim'), 400); }
+    root.setAttribute('data-theme', t);
+    if (themeBtn) {
+      themeBtn.innerHTML = t === 'dark' ? ICON_SUN : ICON_MOON;
+      const next = t === 'dark' ? 'light' : 'dark';
+      themeBtn.setAttribute('aria-label', 'Switch to ' + next + ' mode');
+      themeBtn.title = 'Switch to ' + next + ' mode';
+    }
+    if (themeMeta) themeMeta.setAttribute('content', t === 'dark' ? '#14171a' : '#ffffff');
+  }
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light', false);
+  if (themeBtn) themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('pp.theme', next); } catch (e) { /* private mode */ }
+    applyTheme(next, true);
+  });
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onSys = (e) => { if (!storedTheme()) applyTheme(e.matches ? 'dark' : 'light', true); };
+    if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
+  }
+
   /* ---------- runner status pill ---------- */
   PP.onRunnerState((s, msg) => {
     const pill = document.getElementById('pystate');
