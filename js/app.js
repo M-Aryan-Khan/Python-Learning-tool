@@ -45,7 +45,13 @@
     if (PP.backend.mode === 'demo') userSlot.before(h('span', { class: 'demo-pill', title: 'No database is connected. Accounts and data stay in this browser.' }, 'DEMO'));
     PP.auth.mountMenu(userSlot);
   }
-  PP.auth.onChange(() => { const y = window.scrollY; renderRoute(); window.scrollTo(0, y); });
+  let wasSignedIn = false;
+  PP.auth.onChange((user) => {
+    const justSignedIn = !!user && !wasSignedIn; wasSignedIn = !!user;
+    // admins land on their dashboard when they sign in from the home page
+    if (justSignedIn && PP.auth.isAdmin && (!location.hash || location.hash === '#/')) { location.hash = '#/admin'; return; }
+    const y = window.scrollY; renderRoute(); window.scrollTo(0, y);
+  });
   PP.auth.init().then(() => renderRoute());
 
   /* ---------- runner status pill ---------- */
@@ -79,7 +85,9 @@
   }
 
   function updateOverall() {
-    document.getElementById('overall').textContent = PP.overall() + '% complete';
+    const pill = document.getElementById('overall');
+    pill.textContent = PP.overall() + '% complete';
+    pill.hidden = !!(PP.auth && PP.auth.isAdmin);   // admins do not have course progress
   }
   PP.store.onChange(() => {
     updateOverall();
@@ -111,7 +119,8 @@
       h('p', { class: 'hero-school' }, 'Specially crafted for ', h('strong', null, 'Beacon Light Academy')),
       h('p', { class: 'lede' }, 'Start from your very first line of code and build up to everything Paper 2 asks. Every idea is shown in all its forms, then you run it, change it, trace it and test yourself - right here in the browser.'),
       h('div', { class: 'hero-actions' },
-        h('a', { class: 'btn primary lg', href: '#/learn/' + nl.l.id }, started ? 'Continue: ' + nl.l.title : 'Start with lesson 1'),
+        PP.auth.isAdmin ? h('a', { class: 'btn primary lg', href: '#/admin' }, 'Open the admin dashboard') : null,
+        h('a', { class: PP.auth.isAdmin ? 'btn lg' : 'btn primary lg', href: '#/learn/' + (PP.auth.isAdmin ? PP.modules[0].lessons[0].id : nl.l.id) }, PP.auth.isAdmin ? 'Preview the course' : (started ? 'Continue: ' + nl.l.title : 'Start with lesson 1')),
         h('a', { class: 'btn lg', href: '#/play' }, 'Open the playground'))));
 
     page.append(h('h2', { style: 'margin-top:44px' }, 'How each lesson works'));
@@ -186,10 +195,11 @@
     updateProg();
     const refresh = PP.ui.renderBlocks(l, mount);
     PP.sync.currentLesson = l.id;
-    if (PP.auth.user) {
+    if (PP.auth.tracks) {
       PP.sync.view(l.id);
       if (!PP.lessonItems(l).length && !PP.store.isDone(l.id)) { PP.store.markDone(l.id); PP.sync.record({ id: l.id, kind: 'read', passed: true }); }
     }
+    if (PP.auth.isAdmin) page.prepend(h('div', { class: 'admin-preview' }, h('strong', null, 'Admin preview. '), 'You can read and run everything here, but nothing you do is saved or counted as progress.', h('a', { href: '#/admin' }, 'Back to the admin dashboard')));
 
     const prev = all[idx - 1], next = all[idx + 1];
     page.append(h('nav', { class: 'prev-next' },

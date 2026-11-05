@@ -16,10 +16,14 @@ PP.backend = (function () {
   const sortSections = (list) => list.slice().sort((a, b) => (a.campus + '|' + a.name).localeCompare(b.campus + '|' + b.name, undefined, { numeric: true }));
 
   const friendly = (e) => {
-    const m = String((e && e.message) || e || 'Something went wrong');
+    let m = String((e && e.message) || e || 'Something went wrong');
+    const status = e && e.status;
+    // a timeout from the e-mail service arrives as an empty message such as "{}"
+    if (status >= 500 || /^\s*\{\s*\}?\s*$/.test(m) || /gateway|timeout|timed out|unexpected_failure|error sending/i.test(m)) return 'We could not send your code by email right now. Please wait a minute and try again. If you already tried once, press Sign in with the same email and password: it will send a new code. If it keeps failing, tell your teacher.';
     if (/Invalid login credentials/i.test(m)) return 'Wrong email or password.';
     if (/Email not confirmed/i.test(m)) return 'EMAIL_NOT_CONFIRMED';
-    if (/already registered|already exists/i.test(m)) return 'An account with this email already exists. Try signing in instead.';
+    if (/account with that email already exists/i.test(m)) return 'That email address already has an account.';
+    if (/already registered|already exists/i.test(m)) return 'An account with this email already exists. Press Sign in. If you never entered your code, signing in will send a new one.';
     if (/rate limit|too many/i.test(m)) return 'Too many attempts or emails. Please wait a few minutes and try again.';
     if (/expired|invalid.*(token|otp)|token.*invalid|otp/i.test(m)) return 'That code is wrong or has expired. Check it and try again, or ask for a new one.';
     if (/password.*(at least|short|weak)/i.test(m)) return 'Choose a longer password (at least 8 characters).';
@@ -52,7 +56,7 @@ PP.backend = (function () {
       async signUp(email, password, meta) {
         const r = await sb.auth.signUp({ email, password, options: { data: meta } });
         if (r.error) throw new Error(friendly(r.error));
-        if (r.data.user && r.data.user.identities && r.data.user.identities.length === 0) throw new Error('An account with this email already exists. Try signing in instead.');
+        if (r.data.user && r.data.user.identities && r.data.user.identities.length === 0) throw new Error('An account with this email already exists. Press Sign in. If you never entered your code, signing in will send a new one.');
         return { needsOtp: !r.data.session };
       },
       async verifySignup(email, code) { ok(await sb.auth.verifyOtp({ email, token: code.trim(), type: 'signup' })); },
@@ -99,6 +103,10 @@ PP.backend = (function () {
         return { progress, stats };
       },
       async recentProgress(limit) { return ok(await sb.from('progress').select('user_id,item_id,lesson_id,kind,attempts,completed_at,last_attempt_at').order('last_attempt_at', { ascending: false }).limit(limit || 30)); },
+      async myManagedSections() { const { data } = await sb.auth.getUser(); return ok(await sb.from('admin_sections').select('section_id').eq('user_id', data.user.id)).map((r) => r.section_id); },
+      async listAdminSections() { return all(() => sb.from('admin_sections').select('user_id,section_id').order('user_id').order('section_id')); },
+      async setSections(userId, ids) { ok(await sb.rpc('admin_set_sections', { p_user: userId, p_sections: ids })); },
+      async createStudent(f) { return ok(await sb.rpc('admin_create_student', { p_email: f.email, p_password: f.password, p_name: f.full_name, p_gr: f.gr_number, p_section: f.section_id })); },
       async setRole(userId, role, campus) { ok(await sb.rpc('admin_set_role', { p_user: userId, p_role: role, p_campus: campus || null })); },
       async updateProfile(userId, f) { ok(await sb.rpc('admin_update_profile', { p_user: userId, p_name: f.full_name, p_gr: f.gr_number || null, p_status: f.school_status, p_campus: f.campus || null, p_section: f.section_id || null, p_active: f.active })); },
       async upsertSection(s) {
@@ -113,7 +121,7 @@ PP.backend = (function () {
      DEMO (localStorage)
      ====================================================================== */
   function makeDemo() {
-    const KEY = 'pp.demo.v2';
+    const KEY = 'pp.demo.v3';
     const SKEY = 'pp.demo.session';
     const uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'u' + Math.random().toString(36).slice(2) + Date.now().toString(36));
     const now = () => new Date().toISOString();
@@ -124,7 +132,7 @@ PP.backend = (function () {
 
     function seed() {
       const rand = (() => { let s = 12345; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
-      const d = { users: [], profiles: [], sections: [], progress: [], stats: [] };
+      const d = { users: [], profiles: [], sections: [], progress: [], stats: [], admin_sections: [] };
       const sec = (campus, name) => { const s = { id: uid(), campus, name, active: true }; d.sections.push(s); return s; };
       const kb = sec('kda', '10-B'), kc = sec('kda', '10-C'), ma = sec('maymar', '10-A'), mb = sec('maymar', '10-B');
       sec('kda', '9-B'); sec('kda', '9-C'); sec('maymar', '9-A'); sec('maymar', '9-C');
@@ -138,8 +146,10 @@ PP.backend = (function () {
       person('coordinator@demo.test', 'coord123', 'Ms Coordinator (demo)', { role: 'coordinator' });
       person('kda@demo.test', 'kda12345', 'KDA Teacher (demo)', { role: 'campus_admin', admin_campus: 'kda' });
       person('maymar@demo.test', 'maymar123', 'Maymar Teacher (demo)', { role: 'campus_admin', admin_campus: 'maymar' });
+      const teacher = person('teacher@demo.test', 'teacher123', 'Section Teacher 10-B (demo)', { role: 'section_admin' });
       const first = ['Ayaan', 'Zara', 'Hamza', 'Fatima', 'Bilal', 'Hira', 'Usman', 'Sana', 'Daniyal', 'Maryam', 'Rayyan', 'Ayesha', 'Taha', 'Noor', 'Owais', 'Laiba', 'Saad', 'Iqra', 'Huzaifa', 'Anaya', 'Faizan', 'Mahnoor', 'Shayan', 'Hoor', 'Arham', 'Eman', 'Zain', 'Areeba', 'Moiz', 'Rida'];
       const last = ['Khan', 'Ahmed', 'Ali', 'Siddiqui', 'Hussain', 'Malik', 'Sheikh', 'Qureshi', 'Memon', 'Baig'];
+      d.admin_sections.push({ user_id: teacher, section_id: kb.id });
       const secs = [kb, kc, ma, mb];
       const items = PP.catalog.items;
       const t0 = Date.now();
@@ -164,7 +174,7 @@ PP.backend = (function () {
       });
       return d;
     }
-    function load() { if (db) return db; try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) { db = null; } if (!db) { db = seed(); save(); } return db; }
+    function load() { if (db) return db; try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) { db = null; } if (!db) { db = seed(); save(); } db.admin_sections = db.admin_sections || []; return db; }
     function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* storage full or blocked */ } }
     const sessionId = () => { try { return localStorage.getItem(SKEY); } catch (e) { return null; } };
     const setSession = (id) => { try { if (id) localStorage.setItem(SKEY, id); else localStorage.removeItem(SKEY); } catch (e) { /* ignore */ } };
@@ -176,8 +186,10 @@ PP.backend = (function () {
       const m = me(); if (!m) return false;
       if (t.id === m.id || m.role === 'super_admin') return true;
       if (t.school_status === 'none' || !t.campus) return false;
-      return m.role === 'coordinator' || (m.role === 'campus_admin' && m.admin_campus === t.campus);
+      return m.role === 'coordinator' || (m.role === 'campus_admin' && m.admin_campus === t.campus) || canManageSec(m, t.section_id);
     }
+    const canManageSec = (m, secId) => !!m && m.active && (m.role === 'super_admin' || (m.role !== 'student' && !!secId && db.admin_sections.some((a) => a.user_id === m.id && a.section_id === secId)));
+    const canManageUser = (m, t) => !!m && (m.role === 'super_admin' || (t.role === 'student' && t.school_status !== 'none' && canManageSec(m, t.section_id)));
     const needSuper = () => { const m = me(); if (!m || m.role !== 'super_admin') throw new Error('Only the super admin can do that.'); return m; };
     const delay = (v) => new Promise((r) => setTimeout(() => r(v), 60));
     const summary = (id) => {
@@ -229,7 +241,7 @@ PP.backend = (function () {
       async signOut() { setSession(null); emit(); },
       async requestReset(email) { load(); email = email.trim().toLowerCase(); pending[email] = { kind: 'reset' }; return delay(); },
       async changePassword(pw) { load(); const p = me(); const u = db.users.find((x) => x.id === p.id); u.password = pw; save(); },
-      async setPassword(userId, pw) { needSuper(); if (pw.length < 8) throw new Error('Choose a longer password (at least 8 characters).'); const u = db.users.find((x) => x.id === userId); if (!u) throw new Error('No such user.'); u.password = pw; save(); },
+      async setPassword(userId, pw) { load(); const m = me(), t = db.profiles.find((x) => x.id === userId); if (!t || !canManageUser(m, t)) throw new Error('You can only set passwords for learners in your own sections.'); if (pw.length < 8) throw new Error('Choose a longer password (at least 8 characters).'); const u = db.users.find((x) => x.id === userId); u.password = pw; save(); },
       async confirmReset(email, code, password) {
         load(); email = email.trim().toLowerCase();
         if (!pending[email] || code.trim() !== DEMO_CODE) throw new Error(friendly('invalid token'));
@@ -243,6 +255,7 @@ PP.backend = (function () {
       async myProgress() { load(); const p = me(); return delay(db.progress.filter((r) => r.user_id === p.id).map((r) => Object.assign({}, r))); },
       async saveProgress(x) {
         load(); const p = me(); if (!p) throw new Error('Not signed in.');
+        if (p.role !== 'student') return;
         let r = db.progress.find((q) => q.user_id === p.id && q.item_id === x.item_id);
         if (!r) { r = { user_id: p.id, item_id: x.item_id, lesson_id: x.lesson_id || null, kind: x.kind || null, attempts: 0, passes: 0, completed_at: null, first_attempt_at: now(), last_attempt_at: now(), code: null }; db.progress.push(r); }
         r.attempts += 1; if (x.passed) { r.passes += 1; if (!r.completed_at) r.completed_at = now(); }
@@ -250,7 +263,7 @@ PP.backend = (function () {
         p.last_seen = now(); save();
       },
       async bumpLesson(lessonId, views, runs) {
-        load(); const p = me(); if (!p) return;
+        load(); const p = me(); if (!p || p.role !== 'student') return;
         let s = db.stats.find((q) => q.user_id === p.id && q.lesson_id === lessonId);
         if (!s) { s = { user_id: p.id, lesson_id: lessonId, views: 0, runs: 0, first_seen: now(), last_seen: now() }; db.stats.push(s); }
         s.views += views || 0; s.runs += runs || 0; s.last_seen = now(); p.last_seen = now(); save();
@@ -264,10 +277,17 @@ PP.backend = (function () {
         const m = needSuper(); if (userId === m.id) throw new Error('You cannot change your own role.');
         const t = db.profiles.find((p) => p.id === userId); if (!t) throw new Error('No such user.');
         if (role === 'campus_admin' && !campus) throw new Error('A campus admin needs a campus.');
-        t.role = role; t.admin_campus = role === 'campus_admin' ? campus : null; save();
+        t.role = role; t.admin_campus = role === 'campus_admin' ? campus : null;
+        if (role === 'student') db.admin_sections = db.admin_sections.filter((a) => a.user_id !== userId);
+        save();
       },
       async updateProfile(userId, f) {
-        needSuper(); const t = db.profiles.find((p) => p.id === userId); if (!t) throw new Error('No such user.');
+        load(); const m = me(); const t = db.profiles.find((p) => p.id === userId); if (!t) throw new Error('No such user.');
+        if (m.role !== 'super_admin') {
+          if (!canManageUser(m, t)) throw new Error('You can only change learners in your own sections.');
+          if (f.school_status === 'none') throw new Error('Only the super admin can remove someone from the school.');
+          if (!canManageSec(m, f.section_id)) throw new Error('That section is not one of yours.');
+        }
         t.full_name = String(f.full_name).trim().slice(0, 80); t.active = f.active !== false;
         if (f.school_status === 'none') { t.school_status = 'none'; t.campus = null; t.section_id = null; t.gr_number = null; }
         else {
@@ -281,6 +301,25 @@ PP.backend = (function () {
         if (s.id) { const r = db.sections.find((x) => x.id === s.id); if (r) { r.name = s.name; r.active = s.active; } }
         else { if (db.sections.some((x) => x.campus === s.campus && x.name === s.name)) throw new Error('That section already exists.'); db.sections.push({ id: uid(), campus: s.campus, name: s.name, active: true }); }
         save();
+      },
+      async myManagedSections() { load(); const m = me(); return delay(db.admin_sections.filter((a) => a.user_id === m.id).map((a) => a.section_id)); },
+      async listAdminSections() { load(); needSuper(); return delay(db.admin_sections.map((a) => Object.assign({}, a))); },
+      async setSections(userId, ids) { load(); needSuper(); const t = db.profiles.find((p) => p.id === userId); if (!t || t.role === 'student') throw new Error('That person is not an admin.'); db.admin_sections = db.admin_sections.filter((a) => a.user_id !== userId).concat(ids.filter((id) => db.sections.some((s) => s.id === id)).map((id) => ({ user_id: userId, section_id: id }))); save(); },
+      async createStudent(f) {
+        load(); const m = me();
+        if (!canManageSec(m, f.section_id)) throw new Error('You cannot add learners to that section.');
+        const sec = db.sections.find((x) => x.id === f.section_id && x.active); if (!sec) throw new Error('Unknown or hidden section.');
+        const email = String(f.email || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('That email address is not valid.');
+        if (String(f.full_name || '').trim().length < 2) throw new Error('Name too short.');
+        if (!String(f.gr_number || '').trim()) throw new Error('GR number is required.');
+        if (String(f.password || '').length < 8) throw new Error('Password too short (at least 8 characters).');
+        if (db.users.some((u) => u.email === email)) throw new Error('That email address already has an account.');
+        const user = { id: uid(), email, password: f.password, verified: true };
+        db.users.push(user);
+        createProfile(user, { school: true, campus: sec.campus, section_id: sec.id, gr_number: f.gr_number, full_name: f.full_name });
+        db.profiles.find((p) => p.id === user.id).school_status = 'confirmed';
+        save(); return delay(user.id);
       },
       resetDemo() { try { localStorage.removeItem(KEY); localStorage.removeItem(SKEY); } catch (e) { /* ignore */ } db = null; load(); emit(); },
     };

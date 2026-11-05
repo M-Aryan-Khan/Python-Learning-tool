@@ -39,7 +39,7 @@
 
   /* ---- called by the activities ---- */
   sync.record = function (r) {   // {id, kind, passed, code}
-    if (!PP.auth.user) return;
+    if (!PP.auth.tracks) return;
     const it = PP.catalog.byId[r.id];
     queue.push({ t: 'progress', v: { item_id: r.id, lesson_id: it ? it.lessonId : (lastLesson || null), kind: r.kind || (it && it.kind) || null, code: r.code || null, passed: !!r.passed } });
     persist(); flush();
@@ -47,7 +47,7 @@
   sync.view = function (lessonId) { count(lessonId, 1, 0); };
   sync.run = function () { if (lastLesson) count(lastLesson, 0, 1); };
   function count(lessonId, views, runs) {
-    if (!PP.auth.user) return;
+    if (!PP.auth.tracks) return;
     const c = (counters[lessonId] = counters[lessonId] || { views: 0, runs: 0 });
     c.views += views; c.runs += runs;
     clearTimeout(counterTimer);
@@ -64,7 +64,7 @@
   /* ---- when a student signs in: pull their saved progress down ---- */
   sync.load = async function () {
     restoreQueue();
-    if (!PP.auth.user) return;
+    if (!PP.auth.tracks) return;
     try {
       const rows = await B.myProgress();
       PP.store.bulkDone(rows.filter((r) => r.completed_at).map((r) => r.item_id));

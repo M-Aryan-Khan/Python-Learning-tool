@@ -15,6 +15,9 @@ do $$ begin
   create type public.school_status as enum ('none', 'claimed', 'confirmed');
 exception when duplicate_object then null; end $$;
 
+-- a 'section_admin' is a teacher who sees and manages only the sections assigned to them
+alter type public.app_role add value if not exists 'section_admin';
+
 -- ---------- campuses and sections (managed by the super admin) ----------
 create table if not exists public.campuses (
   code text primary key,
@@ -72,6 +75,13 @@ create table if not exists public.progress (
 create index if not exists progress_lesson_idx on public.progress (lesson_id);
 create index if not exists progress_recent_idx on public.progress (last_attempt_at desc);
 
+-- which sections an admin manages (section admins see only these; any admin may also be given sections to manage)
+create table if not exists public.admin_sections (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  section_id uuid not null references public.sections (id) on delete cascade,
+  primary key (user_id, section_id)
+);
+
 create table if not exists public.lesson_stats (
   user_id uuid not null references public.profiles (id) on delete cascade,
   lesson_id text not null,
@@ -100,13 +110,38 @@ $$;
 -- who may look at this person's profile and progress?
 --   super admin: everyone.  coordinator: every school student.  campus admin: school students of their campus.
 --   people who are NOT school students are visible to the super admin only.
+-- can this admin manage learners of this section? (super admin: every section; others: sections assigned to them)
+create or replace function public.can_manage_section(sec uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.is_super() or (
+    sec is not null and exists (
+      select 1 from public.admin_sections a join public.profiles p on p.id = a.user_id
+      where a.user_id = auth.uid() and a.section_id = sec and p.active and p.role::text <> 'student'
+    )
+  );
+$$;
+
+-- who may look at this person's profile and progress?
+--   super admin: everyone.  coordinator: every school student.  campus admin: school students of their campus.
+--   any admin: school students in a section assigned to them.
+--   people who are NOT school students are visible to the super admin only.
 create or replace function public.can_view_user(uid uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select public.is_super()
       or exists (
         select 1 from public.profiles t
-        where t.id = uid and t.school_status <> 'none' and t.campus is not null and public.can_view_campus(t.campus)
+        where t.id = uid and t.school_status <> 'none' and t.campus is not null
+          and (public.can_view_campus(t.campus) or public.can_manage_section(t.section_id))
       );
+$$;
+
+-- can this admin change this learner (details, password)?
+create or replace function public.can_manage_user(uid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.is_super() or exists (
+    select 1 from public.profiles t
+    where t.id = uid and t.role::text = 'student' and t.school_status <> 'none' and public.can_manage_section(t.section_id)
+  );
 $$;
 
 -- ---------- when someone signs up, create their profile ----------
@@ -148,6 +183,7 @@ alter table public.sections enable row level security;
 alter table public.profiles enable row level security;
 alter table public.progress enable row level security;
 alter table public.lesson_stats enable row level security;
+alter table public.admin_sections enable row level security;
 
 -- campuses / sections: everyone may read (the sign-up form needs them); only the super admin may change sections
 drop policy if exists campuses_read on public.campuses;
@@ -163,6 +199,11 @@ create policy sections_write on public.sections for all to authenticated using (
 drop policy if exists profiles_read on public.profiles;
 create policy profiles_read on public.profiles for select to authenticated
   using (id = (select auth.uid()) or public.can_view_user(id));
+
+-- assignments: you can see your own; the super admin sees all
+drop policy if exists admin_sections_read on public.admin_sections;
+create policy admin_sections_read on public.admin_sections for select to authenticated
+  using (user_id = (select auth.uid()) or public.is_super());
 
 -- progress and stats: read-only from the browser (writes go through the functions below)
 drop policy if exists progress_read on public.progress;
@@ -180,6 +221,8 @@ begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
   if p_item is null or length(p_item) not between 1 and 120 then raise exception 'bad item'; end if;
   if not exists (select 1 from public.profiles where id = auth.uid() and active) then raise exception 'account disabled'; end if;
+  -- admins only look around: their activity is never recorded
+  if exists (select 1 from public.profiles where id = auth.uid() and role <> 'student') then return; end if;
   if (select count(*) from public.progress where user_id = auth.uid()) >= 3000
      and not exists (select 1 from public.progress where user_id = auth.uid() and item_id = p_item) then
     raise exception 'too many items';
@@ -202,6 +245,7 @@ returns void language plpgsql security definer set search_path = public as $$
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
   if not exists (select 1 from public.profiles where id = auth.uid() and active) then raise exception 'account disabled'; end if;
+  if exists (select 1 from public.profiles where id = auth.uid() and role <> 'student') then return; end if;
   if (select count(*) from public.lesson_stats where user_id = auth.uid()) >= 500
      and not exists (select 1 from public.lesson_stats where user_id = auth.uid() and lesson_id = left(p_lesson, 80)) then
     return;
@@ -229,8 +273,13 @@ create or replace function public.admin_update_profile(
   p_campus text, p_section uuid, p_active boolean)
 returns void language plpgsql security definer set search_path = public as $$
 begin
-  if not public.is_super() then raise exception 'only the super admin can do this'; end if;
+  if auth.uid() is null then raise exception 'not signed in'; end if;
   if not exists (select 1 from public.profiles where id = p_user) then raise exception 'no such user'; end if;
+  if not public.is_super() then
+    if not public.can_manage_user(p_user) then raise exception 'you can only change learners in your own sections'; end if;
+    if p_status = 'none' then raise exception 'only the super admin can remove someone from the school'; end if;
+    if not public.can_manage_section(p_section) then raise exception 'that section is not one of yours'; end if;
+  end if;
   if length(trim(coalesce(p_name, ''))) < 2 then raise exception 'name too short'; end if;
   if p_user = auth.uid() and p_active is false then raise exception 'you cannot disable your own account'; end if;
   if p_status = 'none' then
@@ -256,13 +305,25 @@ begin
     raise exception 'a campus admin needs a campus';
   end if;
   update public.profiles set role = p_role, admin_campus = case when p_role = 'campus_admin' then p_campus end where id = p_user;
+  if p_role = 'student' then delete from public.admin_sections where user_id = p_user; end if;
 end $$;
 
--- Set a new password for a learner WITHOUT any e-mail (free plan friendly). Super admin only.
+-- which sections an admin manages (super admin only)
+create or replace function public.admin_set_sections(p_user uuid, p_sections uuid[])
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_super() then raise exception 'only the super admin can do this'; end if;
+  if not exists (select 1 from public.profiles where id = p_user and role::text <> 'student') then raise exception 'that person is not an admin'; end if;
+  delete from public.admin_sections where user_id = p_user;
+  insert into public.admin_sections (user_id, section_id)
+    select p_user, s.id from public.sections s where s.id = any(coalesce(p_sections, '{}'::uuid[]));
+end $$;
+
+-- Set a new password for a learner WITHOUT any e-mail (free plan friendly). Super admin, or the admin of that learner's section.
 create or replace function public.admin_set_password(p_user uuid, p_password text)
 returns void language plpgsql security definer set search_path = public, extensions, auth as $$
 begin
-  if not public.is_super() then raise exception 'only the super admin can do this'; end if;
+  if not public.can_manage_user(p_user) then raise exception 'you can only set passwords for learners in your own sections'; end if;
   if length(coalesce(p_password, '')) < 8 then raise exception 'password too short (at least 8 characters)'; end if;
   if length(p_password) > 72 then raise exception 'password too long (at most 72 characters)'; end if;
   if not exists (select 1 from auth.users where id = p_user) then raise exception 'no such user'; end if;
@@ -271,6 +332,45 @@ begin
   -- sign the learner out everywhere so the old password stops working
   begin delete from auth.sessions where user_id = p_user; exception when others then null; end;
   begin delete from auth.refresh_tokens where user_id::text = p_user::text; exception when others then null; end;
+end $$;
+
+-- Create a learner's account straight away (confirmed, ready to sign in with e-mail + password).
+-- Super admin: any section. Section admin: only sections assigned to them.
+create or replace function public.admin_create_student(p_email text, p_password text, p_name text, p_gr text, p_section uuid)
+returns uuid language plpgsql security definer set search_path = public, extensions, auth as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_email text := lower(trim(coalesce(p_email, '')));
+  v_campus text;
+begin
+  if auth.uid() is null then raise exception 'not signed in'; end if;
+  if not public.can_manage_section(p_section) then raise exception 'you cannot add learners to that section'; end if;
+  select s.campus into v_campus from public.sections s where s.id = p_section and s.active;
+  if v_campus is null then raise exception 'unknown or hidden section'; end if;
+  if length(v_email) > 200 or v_email !~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' then raise exception 'that email address is not valid'; end if;
+  if length(trim(coalesce(p_name, ''))) < 2 then raise exception 'name too short'; end if;
+  if length(trim(coalesce(p_gr, ''))) < 1 then raise exception 'GR number is required'; end if;
+  if length(coalesce(p_password, '')) < 8 then raise exception 'password too short (at least 8 characters)'; end if;
+  if length(p_password) > 72 then raise exception 'password too long (at most 72 characters)'; end if;
+  if exists (select 1 from auth.users u where lower(u.email) = v_email) then raise exception 'an account with that email already exists'; end if;
+
+  insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+                          raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+                          confirmation_token, recovery_token, email_change_token_new, email_change)
+  values ('00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated', v_email,
+          extensions.crypt(p_password, extensions.gen_salt('bf', 10)), now(),
+          '{"provider":"email","providers":["email"]}'::jsonb,
+          jsonb_build_object('full_name', left(trim(p_name), 80), 'school', true, 'campus', v_campus,
+                             'section_id', p_section::text, 'gr_number', left(trim(p_gr), 30)),
+          now(), now(), '', '', '', '');
+
+  insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+  values (gen_random_uuid(), v_id, jsonb_build_object('sub', v_id::text, 'email', v_email, 'email_verified', true),
+          'email', v_id::text, now(), now(), now());
+
+  -- the sign-up trigger made the profile as "claimed"; an admin adding the learner means it is confirmed
+  update public.profiles set school_status = 'confirmed' where id = v_id;
+  return v_id;
 end $$;
 
 -- ---------- one-row-per-student summary for the admin lists (respects the same security rules) ----------
@@ -292,7 +392,7 @@ alter default privileges for role postgres in schema public revoke all on sequen
 
 revoke all on all tables in schema public from anon, authenticated;
 grant select on public.campuses, public.sections to anon, authenticated;
-grant select on public.profiles, public.progress, public.lesson_stats, public.student_summary to authenticated;
+grant select on public.profiles, public.progress, public.lesson_stats, public.student_summary, public.admin_sections to authenticated;
 grant insert, update, delete on public.sections to authenticated;   -- still limited to the super admin by the policy above
 
 revoke all on function public.is_super() from public, anon;
@@ -313,6 +413,14 @@ grant execute on function public.bump_lesson(text, integer, integer) to authenti
 grant execute on function public.update_my_name(text) to authenticated;
 grant execute on function public.admin_update_profile(uuid, text, text, public.school_status, text, uuid, boolean) to authenticated;
 grant execute on function public.admin_set_role(uuid, public.app_role, text) to authenticated;
+revoke all on function public.can_manage_section(uuid) from public, anon;
+revoke all on function public.can_manage_user(uuid) from public, anon;
+revoke all on function public.admin_set_sections(uuid, uuid[]) from public, anon;
+revoke all on function public.admin_create_student(text, text, text, text, uuid) from public, anon;
+grant execute on function public.can_manage_section(uuid) to authenticated;
+grant execute on function public.can_manage_user(uuid) to authenticated;
+grant execute on function public.admin_set_sections(uuid, uuid[]) to authenticated;
+grant execute on function public.admin_create_student(text, text, text, text, uuid) to authenticated;
 grant execute on function public.admin_set_password(uuid, text) to authenticated;
 
 -- =====================================================================

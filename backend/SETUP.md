@@ -20,6 +20,27 @@ It renames XB→10-B and XC→10-C (students already in them stay attached) and 
 
 (A brand-new project can just run the latest `schema.sql`, which already has these.)
 
+## 1b. Re-run `schema.sql` after every update (safe)
+
+`backend/schema.sql` is written to be re-run: it only creates what is missing and replaces functions/policies. **It does not delete accounts, progress or sections.** Paste the whole file in the SQL Editor and Run. (Export Students CSV first if you want a safety copy.)
+The latest version adds **section admins** and **adding students from the portal**.
+
+Optional one-time cleanup of progress that admins created before they were excluded:
+
+```sql
+delete from public.progress where user_id in (select id from public.profiles where role <> 'student');
+```
+
+### Who can do what
+| Role | Sees | Can add / edit learners and set passwords |
+|---|---|---|
+| Super admin | everyone | everyone; also roles, sections, assignments |
+| Coordinator / Campus admin | both / one campus | only in sections the super admin assigns them |
+| Section admin | only their assigned sections | those sections |
+
+Assign sections in portal → **Admins → Change**. Admin-created accounts need no e-mail code: the learner signs in with the e-mail and password you set.
+Note: `admin_create_student` writes straight into Supabase's auth tables. It was syntax-checked but test it once with a dummy student; if Supabase changes its internal auth schema it may need adjusting.
+
 ## 2. Brevo: get an SMTP key (10 minutes)
 
 1. Create a free account at <https://www.brevo.com> and finish the sign-up checks. The free plan sends **300 e-mails a day**.

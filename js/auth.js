@@ -8,7 +8,7 @@
   const listeners = [];
   const state = { session: null, profile: null, ready: false };
 
-  const ROLE_LABEL = { super_admin: 'Super admin', coordinator: 'Coordinator', campus_admin: 'Campus admin', student: 'Student' };
+  const ROLE_LABEL = { super_admin: 'Super admin', coordinator: 'Coordinator', campus_admin: 'Campus admin', section_admin: 'Section admin', student: 'Student' };
   const campusName = (c) => ({ maymar: 'Maymar', kda: 'KDA' }[c] || c || '');
 
   const auth = (PP.auth = {
@@ -16,6 +16,8 @@
     get profile() { return state.profile; },
     get isAdmin() { return !!state.profile && state.profile.role !== 'student'; },
     get isSuper() { return !!state.profile && state.profile.role === 'super_admin'; },
+    /* only learners have tracked progress; admins just look around */
+    get tracks() { return !!state.session && !(state.profile && state.profile.role !== 'student'); },
     get ready() { return state.ready; },
     ROLE_LABEL, campusName,
     onChange(fn) { listeners.push(fn); },
@@ -37,7 +39,7 @@
       try { state.profile = await B.getMyProfile(); } catch (e) { /* profile row may take a moment right after sign-up */ }
       if (!state.profile) { try { await new Promise((r) => setTimeout(r, 700)); state.profile = await B.getMyProfile(); } catch (e) { /* ignore */ } }
       if (session && state.profile && state.profile.active === false) { await B.signOut(); state.session = null; state.profile = null; PP.store.switchUser(null); emit(); return; }
-      PP.store.switchUser(session.user.id);
+      PP.store.switchUser(state.profile && state.profile.role !== 'student' ? null : session.user.id);   // admins get a throw-away, never-saved slot
     } else PP.store.switchUser(null);
     state.ready = true;
     emit();
@@ -284,8 +286,7 @@
       const btn = h('button', { class: 'a-avatar', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: label }, initials(label));
       const menu = h('div', { class: 'a-menu', role: 'menu', hidden: true },
         h('div', { class: 'a-menu-h' }, h('strong', null, label), h('span', null, auth.roleLine()), p && p.school_status === 'claimed' ? h('em', null, 'Waiting for your teacher to confirm') : null),
-        h('a', { href: '#/me', role: 'menuitem', onclick: () => close() }, 'My progress'),
-        auth.isAdmin ? h('a', { href: '#/admin', role: 'menuitem', onclick: () => close() }, 'Admin portal') : null,
+        auth.isAdmin ? h('a', { href: '#/admin', role: 'menuitem', onclick: () => close() }, 'Admin dashboard') : h('a', { href: '#/me', role: 'menuitem', onclick: () => close() }, 'My progress'),
         h('button', { type: 'button', role: 'menuitem', onclick: async () => { close(); await B.signOut(); if (B.mode === 'supabase') { /* onAuth handles it */ } else adopt(null); location.hash = '#/'; } }, 'Sign out'));
       function close() { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
       closeMenu = close;

@@ -46,11 +46,18 @@
     D.profiles = profiles; D.sections = sections; D.campuses = campuses; D.at = Date.now(); D.progress = {};
     D.secById = {}; sections.forEach((s) => { D.secById[s.id] = s; });
     D.byId = {}; profiles.forEach((p) => { D.byId[p.id] = p; });
+    D.mySecs = new Set(); D.adminSecs = {};
+    if (PP.auth.isSuper) (await B.listAdminSections()).forEach((r) => { const l = (D.adminSecs[r.user_id] = D.adminSecs[r.user_id] || []); if (!l.includes(r.section_id)) l.push(r.section_id); });
+    else (await B.myManagedSections()).forEach((id) => D.mySecs.add(id));
     return D;
   }
   const secName = (p) => (p.section_id && D.secById[p.section_id] ? D.secById[p.section_id].name : '');
   const classLabel = (p) => (p.school_status === 'none' || !p.campus ? 'Not in school' : `${campusName(p.campus)} · ${secName(p) || 'no section'}`);
   const learners = () => D.profiles.filter((p) => p.role === 'student');
+  const canManageSec = (id) => PP.auth.isSuper || (!!id && D.mySecs.has(id));
+  const canManage = (p) => PP.auth.isSuper || (p.role === 'student' && p.school_status !== 'none' && D.mySecs.has(p.section_id));
+  const manageableSections = () => D.sections.filter((s) => s.active && canManageSec(s.id)).sort((a, b) => (a.campus + a.name).localeCompare(b.campus + b.name, undefined, { numeric: true }));
+  const secLabel = (s) => `${campusName(s.campus)} · ${s.name}`;
   async function progressMap(ids) {   // user -> {item_id -> row}
     const need = ids.filter((i) => !D.progress[i]);
     if (need.length) {
@@ -73,9 +80,12 @@
 
   function scopeText() {
     const p = PP.auth.profile;
+    const mine = D.sections ? manageableSections() : [];
+    const mgr = mine.length && p.role !== 'super_admin' ? ' · you manage ' + mine.map((s) => s.name).join(', ') : '';
     if (p.role === 'super_admin') return 'Everyone: all campuses and all learners';
-    if (p.role === 'coordinator') return 'Both campuses (view only)';
-    return `${campusName(p.admin_campus)} campus (view only)`;
+    if (p.role === 'section_admin') return (mine.length ? 'Your sections: ' + mine.map(secLabel).join(', ') : 'No sections assigned yet. Ask the super admin.');
+    if (p.role === 'coordinator') return 'Both campuses' + (mgr ? mgr : ' (view only)');
+    return `${campusName(p.admin_campus)} campus` + (mgr ? mgr : ' (view only)');
   }
 
   async function render(view, parts) {
@@ -92,6 +102,7 @@
     document.title = 'Admin · By Sir Aryan';
     try {
       await ensure(false);
+      const whoS = nav.querySelector('.adm-who-s'); if (whoS) whoS.textContent = scopeText();
       const pages = { overview, students, student: (b, p) => studentPage(b, parts[2], p), sections, admins, settings };
       if ((page === 'admins' || page === 'settings') && !sup) { body.replaceChildren(h('div', { class: 'adm-error' }, 'Only the super admin can open this page.')); return; }
       const fn = pages[page] || overview;
@@ -119,8 +130,22 @@
     const secRows = Object.keys(groups).map((k) => { const ps = groups[k]; const f = ps[0]; return { campus: f.campus, sec: secName(f), n: ps.length, avg: Math.round(ps.reduce((a, p) => a + pctOf(p.done_items, CAT.total), 0) / ps.length), act: ps.filter((p) => !inactive(p)).length, id: f.section_id }; })
       .sort((a, b) => (a.campus + a.sec).localeCompare(b.campus + b.sec));
     const feedHost = h('div', { class: 'feed' }, loading('Loading activity…'));
+    const me = PP.auth.profile, sup = PP.auth.isSuper;
+    const notInSchool = D.profiles.filter((p) => p.role === 'student' && p.school_status === 'none').length;
+    const canAddHere = manageableSections().length > 0;
+    const addItem = canAddHere ? ['Add students', 'Create accounts for your learners: type each person\u2019s email, password and section, or paste a whole class.', null, 'Add'] : null;
+    const todo = (sup || canAddHere) ? [
+      addItem,
+      unconfirmed ? ['Confirm school students', `${unconfirmed} learner${unconfirmed === 1 ? ' is' : 's are'} waiting for you to check their class details.`, '#/admin/students?status=claimed', 'Review'] : null,
+      notInSchool ? ['People outside the school', `${notInSchool} account${notInSchool === 1 ? '' : 's'} not placed in a campus. Move any students into their class.`, '#/admin/students?status=none', 'Open list'] : null,
+      sup ? ['Sections and admins', 'Add Maymar or KDA sections, and give teachers access.', '#/admin/settings', 'Manage'] : null,
+    ].filter(Boolean) : null;
+    const hello = h('section', { class: 'welcome' },
+      h('div', null, h('div', { class: 'welcome-h' }, 'Welcome back, ', (me.full_name || '').split(' ')[0] || 'there'), h('div', { class: 'welcome-s' }, badge(PP.auth.ROLE_LABEL[me.role], me.role === 'super_admin' ? 'accent' : 'ok'), ' ', scopeText())),
+      todo ? h('div', { class: 'todo' }, todo.map(([t, d, href, cta]) => h('a', Object.assign({ class: 'todo-i', href: href || '#' }, href ? {} : { onclick: (e) => { e.preventDefault(); addStudentsDialog(); } }), h('span', null, h('strong', null, t), h('small', null, d)), h('span', { class: 'todo-go' }, cta + ' →')))) : h('p', { class: 'adm-sub' }, 'You can see progress for your learners. Only the super admin, or the admin of a learner\u2019s section, can change a learner.'));
     body.replaceChildren(
-      pageHead('Overview', scopeText(), [refreshBtn()]),
+      pageHead('Dashboard', null, [refreshBtn()]),
+      hello,
       h('div', { class: 'kpis' },
         kpi('Learners', String(list.length), unconfirmed ? `${unconfirmed} waiting for confirmation` : 'in your view'),
         kpi('Active this week', String(active.length), list.length ? pctOf(active.length, list.length) + '% of learners' : ''),
@@ -154,6 +179,7 @@
   async function students(body) {
     const q = new URLSearchParams((location.hash.split('?')[1]) || '');
     if (q.get('act')) { Q.act = q.get('act'); Q.page = 0; }
+    if (q.get('status')) { Q.status = q.get('status'); Q.page = 0; }
     const sup = PP.auth.isSuper;
     const campuses = [...new Set(learners().map((p) => p.campus).filter(Boolean))];
     const search = h('input', { type: 'search', class: 'ain', placeholder: 'Search name, GR number or email', value: Q.search, 'aria-label': 'Search students' });
@@ -170,7 +196,8 @@
       const rows = filtered();
       downloadCsv('python-path-students.csv', [['Name', 'GR number', 'Email', 'Campus', 'Section', 'Status', 'Completion %', 'Activities done', 'Attempts', 'Last active']].concat(rows.map((p) => [p.full_name, p.gr_number || '', p.email || '', p.campus ? campusName(p.campus) : '', secName(p), STATUS[p.school_status][0], pctOf(p.done_items, CAT.total), p.done_items, p.attempts, p.last_activity || ''])));
     } }, 'Export CSV');
-    body.replaceChildren(pageHead('Students', scopeText(), [exportBtn, refreshBtn()]),
+    const addBtn = manageableSections().length ? h('button', { class: 'btn primary small', onclick: () => addStudentsDialog() }, 'Add students') : null;
+    body.replaceChildren(pageHead('Students', scopeText(), [addBtn, exportBtn, refreshBtn()]),
       h('div', { class: 'filters' }, search, campusSel, secSel, statusSel, actSel, h('button', { class: 'btn small ghost', onclick: () => { Object.assign(Q, { search: '', campus: '', section: '', status: '', act: '', page: 0 }); students(body); } }, 'Clear')),
       count, tableHost);
 
@@ -255,7 +282,7 @@
     const recent = det.progress.slice().sort((a, b) => (a.last_attempt_at < b.last_attempt_at ? 1 : -1)).slice(0, 8);
     const titleOf = (iid) => { const it = CAT.byId[iid]; return it ? (it.title || (it.kind === 'read' ? 'Reading lesson' : it.kind)) + (CAT.lessons[it.lessonId] ? ' · ' + CAT.lessons[it.lessonId].title : '') : iid; };
 
-    const manage = sup ? manageCard(p) : h('div', { class: 'viewonly' }, h('strong', null, 'View only. '), 'Only the super admin can change a learner’s details.');
+    const manage = canManage(p) ? manageCard(p) : h('div', { class: 'viewonly' }, h('strong', null, 'View only. '), 'A learner can be changed by the super admin or by the admin of their section.');
     body.replaceChildren(
       h('a', { class: 'back', href: '#/admin/students' }, '← All students'),
       h('section', { class: 'sthead' }, h('span', { class: 'av lg' }, initials(p.full_name)),
@@ -302,15 +329,98 @@
     document.body.append(ov);
   }
 
+
+  /* ---------------------------------------------------------------- add students (one, or a pasted class list) */
+  function addStudentsDialog() {
+    const secs = manageableSections();
+    if (!secs.length) { toast('You have no sections to add students to.', true); return; }
+    const secSel = h('select', { class: 'ain', 'aria-label': 'Section' }, secs.map((s) => h('option', { value: s.id }, secLabel(s))));
+    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) done(); } });
+    let created = 0;
+    function done() { ov.remove(); if (created) { D.at = 0; ensure(true).then(() => PP.admin.rerender()); } }
+    const one = { name: h('input', { class: 'ain', maxlength: 80, placeholder: 'Full name', 'aria-label': 'Full name' }), email: h('input', { class: 'ain', type: 'email', placeholder: 'student@example.com', 'aria-label': 'Email' }), gr: h('input', { class: 'ain', maxlength: 30, placeholder: 'e.g. 2401', 'aria-label': 'GR number' }), pw: h('input', { class: 'ain mono', value: genPassword(), 'aria-label': 'Password' }) };
+    const out = h('div');
+    const err = h('div', { class: 'a-err', hidden: true, role: 'alert' });
+    const mode = { v: 'one' };
+    const oneForm = h('div', { class: 'a-form' }, mf('Full name', one.name), mf('Email (used to sign in)', one.email), mf('GR number', one.gr), mf('Password (minimum 8 characters)', one.pw));
+    const bulk = h('textarea', { class: 'ain an-ta', rows: 7, placeholder: 'One student per line:\nFull name, email, GR number\nAyaan Khan, ayaan@example.com, 2401\nZara Ahmed, zara@example.com, 2402', 'aria-label': 'Students to add' });
+    const bulkForm = h('div', { class: 'a-form', hidden: true }, h('p', { class: 'a-note' }, 'Passwords are made for you (a different one each). You will get a list to give out or download.'), bulk);
+    function mf(l, el) { return h('label', { class: 'af' }, h('span', { class: 'af-l' }, l), el); }
+    const tOne = h('button', { class: 'on', type: 'button', onclick: () => sw('one') }, 'Add one student'), tMany = h('button', { type: 'button', onclick: () => sw('many') }, 'Add several at once');
+    function sw(m) { mode.v = m; oneForm.hidden = m !== 'one'; bulkForm.hidden = m !== 'many'; tOne.classList.toggle('on', m === 'one'); tMany.classList.toggle('on', m === 'many'); out.replaceChildren(); err.hidden = true; go.textContent = m === 'one' ? 'Create account' : 'Create accounts'; }
+    const go = h('button', { class: 'btn primary', type: 'button' }, 'Create account');
+    function askConfirm(jobs, sec) {
+      return new Promise((resolve) => {
+        const box = h('div', { class: 'a-confirm', role: 'alertdialog', 'aria-label': 'Confirm new accounts' },
+          h('h3', null, jobs.length === 1 ? 'Create this account?' : `Create ${jobs.length} accounts?`),
+          h('p', { class: 'a-note' }, `Section: ${secLabel(sec)}. The account is made straight away: no email code is sent, and the learner signs in with the email and password.`),
+          h('ul', { class: 'plain-list tight' }, jobs.slice(0, 8).map((j) => h('li', null, h('strong', null, j.full_name || '(no name)'), ' · ', j.email || '(no email)', j.gr_number ? ' · GR ' + j.gr_number : ''))),
+          jobs.length > 8 ? h('p', { class: 'a-note' }, `…and ${jobs.length - 8} more.`) : null,
+          h('div', { class: 'btnrow' },
+            h('button', { class: 'btn primary', type: 'button', onclick: () => { box.remove(); go.hidden = false; resolve(true); } }, 'Confirm and create'),
+            h('button', { class: 'btn', type: 'button', onclick: () => { box.remove(); go.hidden = false; resolve(false); } }, 'Go back')));
+        go.hidden = true; out.replaceChildren(box);
+      });
+    }
+    const results = [];
+    go.addEventListener('click', async () => {
+      err.hidden = true; out.replaceChildren(); results.length = 0;
+      const section_id = secSel.value;
+      const jobs = [];
+      if (mode.v === 'one') jobs.push({ full_name: one.name.value.trim(), email: one.email.value.trim(), gr_number: one.gr.value.trim(), password: one.pw.value });
+      else {
+        bulk.value.split('\n').map((l) => l.trim()).filter(Boolean).forEach((line, i) => {
+          const parts = line.split(/\t|,/).map((x) => x.trim());
+          if (/^(full\s*name|name)$/i.test(parts[0]) && i === 0) return;   // header row
+          jobs.push({ full_name: parts[0] || '', email: parts[1] || '', gr_number: parts[2] || '', password: genPassword(), line });
+        });
+        if (!jobs.length) { err.textContent = 'Paste at least one line: Full name, email, GR number.'; err.hidden = false; return; }
+        if (jobs.length > 80) { err.textContent = 'Please add at most 80 students at a time.'; err.hidden = false; return; }
+      }
+      if (mode.v === 'one') {
+        if (!jobs[0].full_name || !/^\S+@\S+\.\S+$/.test(jobs[0].email)) { err.textContent = 'Enter the learner’s name and a valid email.'; err.hidden = false; return; }
+        if (jobs[0].password.length < 8) { err.textContent = 'The password needs at least 8 characters.'; err.hidden = false; return; }
+      }
+      const okGo = await askConfirm(jobs, D.secById[section_id]);
+      if (!okGo) return;
+      go.disabled = true; go.textContent = 'Creating…';
+      for (const j of jobs) {
+        try { await B.createStudent(Object.assign({}, j, { section_id })); created++; results.push(Object.assign({ ok: true }, j)); }
+        catch (e) { results.push(Object.assign({ ok: false, msg: e.message }, j)); }
+      }
+      go.disabled = false; go.textContent = mode.v === 'one' ? 'Create account' : 'Create accounts';
+      const okRows = results.filter((r) => r.ok), bad = results.filter((r) => !r.ok);
+      if (mode.v === 'one' && bad.length) { err.textContent = bad[0].msg; err.hidden = false; return; }
+      const sec = D.secById[section_id];
+      out.replaceChildren(
+        h('div', { class: bad.length ? 'a-note' : 'a-ok' }, `${okRows.length} account${okRows.length === 1 ? '' : 's'} created in ${secLabel(sec)}.${bad.length ? ' ' + bad.length + ' could not be created.' : ''} Give each learner their email and password. They can change it under My progress.`),
+        h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl-a' }, h('thead', null, h('tr', null, ['Name', 'Email', 'Password', ''].map((x) => h('th', null, x)))),
+          h('tbody', null, results.map((r) => h('tr', null, h('td', null, r.full_name || '-'), h('td', null, r.email || '-'), h('td', { class: 'mono' }, r.ok ? r.password : ''), h('td', { class: r.ok ? '' : 'bad-t' }, r.ok ? '\u2713' : r.msg)))))),
+        h('div', { class: 'btnrow' },
+          h('button', { class: 'btn small', type: 'button', onclick: () => { try { navigator.clipboard.writeText(okRows.map((r) => `${r.full_name}\t${r.email}\t${r.password}`).join('\n')); toast('Copied'); } catch (e) { toast('Copy by hand.', true); } } }, 'Copy list'),
+          h('button', { class: 'btn small', type: 'button', onclick: () => downloadCsv('new-students.csv', [['Name', 'Email', 'Password', 'Section']].concat(okRows.map((r) => [r.full_name, r.email, r.password, secLabel(sec)]))) }, 'Download CSV')));
+      if (mode.v === 'one') { one.name.value = ''; one.email.value = ''; one.gr.value = ''; one.pw.value = genPassword(); }
+    });
+    ov.append(h('div', { class: 'a-card wide', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Add students' },
+      h('button', { class: 'a-x', type: 'button', 'aria-label': 'Close', onclick: done }, '\u00d7'),
+      h('h2', { class: 'a-title' }, 'Add students'), h('p', { class: 'a-sub' }, 'The account is ready straight away: no email code is needed. They sign in with the email and password you set.'),
+      h('div', { class: 'a-form' }, mf('Section', secSel),
+        h('div', { class: 'tabs', role: 'tablist' }, tOne, tMany), oneForm, bulkForm, err, h('div', { class: 'btnrow' }, go, h('button', { class: 'btn', type: 'button', onclick: done }, 'Close')), out)));
+    document.body.append(ov);
+    setTimeout(() => one.name.focus(), 30);
+  }
+
   function manageCard(p) {
     const name = h('input', { class: 'ain', value: p.full_name, maxlength: 80, 'aria-label': 'Name' });
     const gr = h('input', { class: 'ain', value: p.gr_number || '', maxlength: 30, 'aria-label': 'GR number' });
-    const status = h('select', { class: 'ain', 'aria-label': 'Status' }, [['none', 'Not a school student'], ['claimed', 'Unconfirmed school student'], ['confirmed', 'Confirmed school student']].map(([v, t]) => h('option', { value: v }, t)));
+    const sup2 = PP.auth.isSuper;
+    const status = h('select', { class: 'ain', 'aria-label': 'Status' }, [['none', 'Not a school student'], ['claimed', 'Unconfirmed school student'], ['confirmed', 'Confirmed school student']].filter((o) => sup2 || o[0] !== 'none').map(([v, t]) => h('option', { value: v }, t)));
     status.value = p.school_status;
-    const campus = h('select', { class: 'ain', 'aria-label': 'Campus' }, D.campuses.map((c) => h('option', { value: c.code }, c.name)));
-    campus.value = p.campus || D.campuses[0].code;
+    const allowedCampuses = sup2 ? D.campuses : D.campuses.filter((c) => manageableSections().some((s) => s.campus === c.code));
+    const campus = h('select', { class: 'ain', 'aria-label': 'Campus' }, allowedCampuses.map((c) => h('option', { value: c.code }, c.name)));
+    campus.value = p.campus && allowedCampuses.some((c) => c.code === p.campus) ? p.campus : allowedCampuses[0].code;
     const section = h('select', { class: 'ain', 'aria-label': 'Section' });
-    const fillSec = () => { const list = D.sections.filter((s) => s.campus === campus.value && (s.active || s.id === p.section_id)); section.replaceChildren(...(list.length ? list.map((s) => h('option', { value: s.id }, s.name)) : [h('option', { value: '' }, 'No sections for this campus')])); if (p.section_id && list.some((s) => s.id === p.section_id) && campus.value === p.campus) section.value = p.section_id; };
+    const fillSec = () => { const list = D.sections.filter((s) => s.campus === campus.value && (s.active || s.id === p.section_id) && canManageSec(s.id)); section.replaceChildren(...(list.length ? list.map((s) => h('option', { value: s.id }, s.name)) : [h('option', { value: '' }, 'No sections for this campus')])); if (p.section_id && list.some((s) => s.id === p.section_id) && campus.value === p.campus) section.value = p.section_id; };
     fillSec(); campus.addEventListener('change', fillSec);
     const active = h('input', { type: 'checkbox' }); active.checked = p.active;
     const schoolBox = h('div', { class: 'mg-school' }, mfield('GR number', gr), mfield('Campus', campus), mfield('Section', section));
@@ -326,7 +436,7 @@
     const reset = h('button', { class: 'btn', onclick: () => passwordDialog(p) }, 'Set a new password');
     const mail = B.emailCodes ? h('button', { class: 'btn', onclick: async () => { if (!p.email) return toast('No email on record.', true); if (!confirm('Email a reset code to ' + p.email + '?')) return; try { await B.requestReset(p.email); toast('Code sent to ' + p.email); } catch (e) { toast(e.message, true); } } }, 'Email a reset code') : null;
     function mfield(l, el) { return h('label', { class: 'af' }, h('span', { class: 'af-l' }, l), el); }
-    return h('section', { class: 'panel manage' }, h('h2', null, 'Manage learner'), h('p', { class: 'adm-sub' }, 'Only you can see and use this.'),
+    return h('section', { class: 'panel manage' }, h('h2', null, 'Manage learner'), h('p', { class: 'adm-sub' }, PP.auth.isSuper ? 'Only you can see and use this.' : 'You can change this learner because they are in your section.'),
       mfield('Full name', name), mfield('Status', status), schoolBox,
       h('label', { class: 'a-radio sw' }, active, h('span', null, 'Account is active')),
       h('div', { class: 'mg-actions' }, save, reset, mail));
@@ -388,31 +498,42 @@
       results.replaceChildren(hits.length ? h('ul', { class: 'plain-list' }, hits.map((p) => h('li', null, h('div', { class: 'row' }, h('span', { class: 'av' }, initials(p.full_name)), h('span', { class: 'li-main' }, h('strong', null, p.full_name), h('small', null, [p.email, classLabel(p)].filter(Boolean).join(' · '))), h('button', { class: 'btn small', onclick: () => roleDialog(p) }, 'Make admin'))))) : h('p', { class: 'empty' }, 'No registered person matches. They must create an account on the site first.'));
     }
     function roleDialog(p) {
-      const role = h('select', { class: 'ain', 'aria-label': 'Role' }, h('option', { value: 'campus_admin' }, 'Campus admin: sees one campus'), h('option', { value: 'coordinator' }, 'Coordinator: sees both campuses'), h('option', { value: 'super_admin' }, 'Super admin: full control'));
-      role.value = p.role !== 'student' ? p.role : 'campus_admin';
+      const role = h('select', { class: 'ain', 'aria-label': 'Role' }, h('option', { value: 'section_admin' }, 'Section admin: sees and manages only their sections'), h('option', { value: 'campus_admin' }, 'Campus admin: sees one campus'), h('option', { value: 'coordinator' }, 'Coordinator: sees both campuses'), h('option', { value: 'super_admin' }, 'Super admin: full control'));
+      role.value = p.role !== 'student' ? p.role : 'section_admin';
       const campus = h('select', { class: 'ain', 'aria-label': 'Campus' }, D.campuses.map((c) => h('option', { value: c.code }, c.name)));
       if (p.admin_campus) campus.value = p.admin_campus;
       const cw = h('label', { class: 'af' }, h('span', { class: 'af-l' }, 'Campus'), campus);
-      role.addEventListener('change', () => { cw.hidden = role.value !== 'campus_admin'; });
-      cw.hidden = role.value !== 'campus_admin';
+      const chosen = new Set(D.adminSecs[p.id] || []);
+      const boxes = [];
+      const secBox = h('fieldset', { class: 'a-q secpick' }, h('legend', null, 'Sections this person manages'),
+        h('p', { class: 'a-note' }, 'They can add learners, edit their details and set passwords for learners in these sections. A section admin sees only these sections.'),
+        D.campuses.map((c) => h('div', { class: 'secgrp' }, h('strong', null, c.name), h('div', { class: 'seclist' }, D.sections.filter((s) => s.campus === c.code && s.active).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).map((s) => { const cb = h('input', { type: 'checkbox', value: s.id }); cb.checked = chosen.has(s.id); boxes.push(cb); return h('label', { class: 'chk' }, cb, h('span', null, s.name)); })))));
+      const syncRole = () => { cw.hidden = role.value !== 'campus_admin'; secBox.hidden = role.value === 'super_admin'; };
+      role.addEventListener('change', syncRole);
+      syncRole();
       const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) ov.remove(); } });
       const go = h('button', { class: 'btn primary', onclick: async () => {
         go.disabled = true;
-        try { await B.setRole(p.id, role.value, role.value === 'campus_admin' ? campus.value : null); await ensure(true); ov.remove(); toast('Role updated'); PP.admin.rerender(); }
+        try {
+          await B.setRole(p.id, role.value, role.value === 'campus_admin' ? campus.value : null);
+          await B.setSections(p.id, role.value === 'super_admin' ? [] : boxes.filter((b) => b.checked).map((b) => b.value));
+          await ensure(true); ov.remove(); toast('Role updated'); PP.admin.rerender();
+        }
         catch (e) { toast(e.message, true); go.disabled = false; }
       } }, 'Save role');
       ov.append(h('div', { class: 'a-card', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Set role' }, h('button', { class: 'a-x', type: 'button', 'aria-label': 'Close', onclick: () => ov.remove() }, '×'),
         h('h2', { class: 'a-title' }, `Role for ${p.full_name}`), h('p', { class: 'a-sub' }, p.email || ''),
-        h('div', { class: 'a-form' }, h('label', { class: 'af' }, h('span', { class: 'af-l' }, 'Role'), role), cw, h('p', { class: 'a-note' }, 'Campus admins and coordinators can view progress only. They cannot change anything about a learner.'), go)));
+        h('div', { class: 'a-form' }, h('label', { class: 'af' }, h('span', { class: 'af-l' }, 'Role'), role), cw, secBox, h('p', { class: 'a-note' }, 'Campus admins and coordinators can view progress. Only the sections you tick above give them the power to change learners.'), go)));
       document.body.append(ov);
     }
     body.replaceChildren(pageHead('Admins', 'Who can open this portal, and what they can see.', [refreshBtn()]),
       h('section', { class: 'panel' }, h('h2', null, 'Current admins'),
-        h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl-a stack-sm' }, h('thead', null, h('tr', null, ['Name', 'Role', 'Can see', ''].map((x) => h('th', null, x)))),
+        h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl-a stack-sm' }, h('thead', null, h('tr', null, ['Name', 'Role', 'Can see', 'Manages', ''].map((x) => h('th', null, x)))),
           h('tbody', null, admins.map((p) => h('tr', null,
             h('td', { 'data-label': 'Name' }, h('div', { class: 'who' }, h('span', { class: 'av' }, initials(p.full_name)), h('div', null, h('strong', null, p.full_name, p.id === me.id ? h('span', { class: 'you' }, ' (you)') : null), h('small', null, p.email || '')))),
             h('td', { 'data-label': 'Role' }, badge(PP.auth.ROLE_LABEL[p.role], p.role === 'super_admin' ? 'accent' : 'ok')),
-            h('td', { 'data-label': 'Can see' }, p.role === 'campus_admin' ? campusName(p.admin_campus) + ' campus' : 'All campuses'),
+            h('td', { 'data-label': 'Can see' }, p.role === 'campus_admin' ? campusName(p.admin_campus) + ' campus' : p.role === 'section_admin' ? 'Only their sections' : 'All campuses'),
+            h('td', { 'data-label': 'Manages' }, p.role === 'super_admin' ? 'Everything' : ((D.adminSecs[p.id] || []).map((id) => D.secById[id]).filter(Boolean).map(secLabel).join(', ') || '\u2014')),
             h('td', { class: 'act' }, p.id === me.id ? h('small', { class: 'sub' }, 'You cannot change your own role') : h('span', { class: 'btnrow' }, h('button', { class: 'btn small', onclick: () => roleDialog(p) }, 'Change'), h('button', { class: 'btn small danger', onclick: async () => { if (!confirm(`Remove admin access from ${p.full_name}? They will become a normal learner.`)) return; try { await B.setRole(p.id, 'student', null); await ensure(true); toast('Admin removed'); PP.admin.rerender(); } catch (e) { toast(e.message, true); } } }, 'Remove'))))))))),
       h('section', { class: 'panel' }, h('h2', null, 'Add an admin'), h('p', { class: 'adm-sub' }, 'The person must first create an account on the site. Then find them here and choose their role.'), search, results));
     find();
@@ -421,7 +542,7 @@
   /* ---------------------------------------------------------------- sections settings (super admin) */
   async function settings(body) {
     const secsBy = (c) => D.sections.filter((s) => s.campus === c).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    const count = (s) => D.profiles.filter((p) => p.section_id === s.id).length;
+    const count = (s) => D.profiles.filter((p) => p.section_id === s.id && p.role === 'student').length;
     const cards = D.campuses.map((c) => {
       const input = h('input', { class: 'ain', placeholder: 'New section name, e.g. 10-B', maxlength: 20, 'aria-label': 'New section name for ' + c.name });
       const add = h('button', { class: 'btn primary', onclick: async () => {
@@ -451,6 +572,7 @@
   /* ---------------------------------------------------------------- the student's own page */
   async function me(view) {
     if (!PP.auth.user) { view.replaceChildren(PP.auth.lockPage('My progress', 'Sign in to see your progress and keep it safe.')); return; }
+    if (PP.auth.isAdmin) { location.hash = '#/admin'; return; }
     const p = PP.auth.profile;
     const page = h('div', { class: 'page wide me' });
     view.replaceChildren(page);
