@@ -201,3 +201,9 @@ pre, code { overflow-wrap: anywhere; }
   .an-ops-wrap { flex: 1 1 100%; }
   .an-ops .btn { flex: 1 1 auto; justify-content: center; }
 }
+
+/* the page is English, left to right: never let a browser translation or a stray rule flip it */
+html, body { direction: ltr; text-align: left; }
+.CodeMirror, .CodeMirror pre, pre, code, textarea { direction: ltr; text-align: left; }
+.page, .blk, .block, .card, .panel, .prose, .lead, p, li { overflow-wrap: anywhere; min-width: 0; }
+.blk > *, .block > * { min-width: 0; max-width: 100%; }
