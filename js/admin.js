@@ -220,7 +220,8 @@
         h('button', { type: 'button', onclick: () => { if (Q.sort === key) Q.dir *= -1; else { Q.sort = key; Q.dir = key === 'progress' || key === 'last' ? -1 : 1; } draw(); } }, label, Q.sort === key ? (Q.dir > 0 ? ' ↑' : ' ↓') : ''));
       if (!rows.length) { tableHost.replaceChildren(h('div', { class: 'empty-big' }, h('strong', null, 'No learners match these filters.'), h('p', null, 'Try clearing a filter or changing your search.'))); return; }
       const pageRows = rows.slice(Q.page * PAGE, Q.page * PAGE + PAGE);
-      tableHost.replaceChildren(
+      const put = (...kids) => tableHost.replaceChildren(...kids.filter(Boolean));
+      put(
         h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl-a stack-sm' },
           h('thead', null, h('tr', null, th('Learner', 'name'), th('Class', 'class'), h('th', null, 'Status'), th('Progress', 'progress'), th('Last active', 'last'), h('th', { class: 'sr' }, 'Open'))),
           h('tbody', null, pageRows.map((p) => {
@@ -526,7 +527,58 @@
         h('div', { class: 'a-form' }, h('label', { class: 'af' }, h('span', { class: 'af-l' }, 'Role'), role), cw, secBox, h('p', { class: 'a-note' }, 'Campus admins and coordinators can view progress. Only the sections you tick above give them the power to change learners.'), go)));
       document.body.append(ov);
     }
-    body.replaceChildren(pageHead('Admins', 'Who can open this portal, and what they can see.', [refreshBtn()]),
+
+    function addAdminDialog() {
+      const nm = h('input', { class: 'ain', maxlength: 80, placeholder: 'Full name', 'aria-label': 'Full name' });
+      const em = h('input', { class: 'ain', type: 'email', placeholder: 'teacher@school.edu', 'aria-label': 'Email' });
+      const pw = h('input', { class: 'ain mono', value: genPassword(), 'aria-label': 'Password' });
+      const role = h('select', { class: 'ain', 'aria-label': 'Role' }, [['section_admin', 'Section admin: sees and manages only their sections'], ['campus_admin', 'Campus admin: sees one campus'], ['coordinator', 'Coordinator: sees both campuses'], ['super_admin', 'Super admin: full control']].map(([v, t]) => h('option', { value: v }, t)));
+      const campus = h('select', { class: 'ain', 'aria-label': 'Campus' }, D.campuses.map((c) => h('option', { value: c.code }, c.name)));
+      const cw = h('label', { class: 'af' }, h('span', { class: 'af-l' }, 'Campus'), campus);
+      const boxes = [];
+      const secBox = h('fieldset', { class: 'a-q secpick' }, h('legend', null, 'Sections this person manages'),
+        h('p', { class: 'a-note' }, 'They can add learners, edit details and set passwords for learners in these sections.'),
+        D.campuses.map((c) => h('div', { class: 'secgrp' }, h('strong', null, c.name), h('div', { class: 'seclist' }, D.sections.filter((s) => s.campus === c.code && s.active).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).map((s) => { const cb = h('input', { type: 'checkbox', value: s.id }); boxes.push(cb); return h('label', { class: 'chk' }, cb, h('span', null, s.name)); })))));
+      const syncRole = () => { cw.hidden = role.value !== 'campus_admin'; secBox.hidden = role.value === 'super_admin'; };
+      role.addEventListener('change', syncRole); syncRole();
+      const err = h('div', { class: 'a-err', hidden: true, role: 'alert' });
+      const out = h('div');
+      const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) close(); } });
+      let made = false;
+      function close() { ov.remove(); if (made) { D.at = 0; ensure(true).then(() => PP.admin.rerender()); } }
+      const go = h('button', { class: 'btn primary', type: 'button' }, 'Create admin');
+      go.addEventListener('click', () => {
+        err.hidden = true;
+        const f = { full_name: nm.value.trim(), email: em.value.trim(), password: pw.value, role: role.value, campus: campus.value, sections: boxes.filter((b) => b.checked).map((b) => b.value) };
+        if (f.full_name.length < 2 || !/^\S+@\S+\.\S+$/.test(f.email)) { err.textContent = 'Enter the person\u2019s name and a valid email.'; err.hidden = false; return; }
+        if (f.password.length < 8) { err.textContent = 'The password needs at least 8 characters.'; err.hidden = false; return; }
+        const secs = f.sections.map((id) => D.secById[id]).filter(Boolean).map(secLabel).join(', ');
+        const box = h('div', { class: 'a-confirm', role: 'alertdialog', 'aria-label': 'Confirm new admin' },
+          h('h3', null, 'Create this admin account?'),
+          h('p', { class: 'a-note' }, 'The account is made straight away: no sign-up and no email code. They sign in with this email and password.'),
+          h('ul', { class: 'plain-list tight' }, h('li', null, h('strong', null, f.full_name), ' \u00b7 ', f.email), h('li', null, 'Role: ' + PP.auth.ROLE_LABEL[f.role] + (f.role === 'campus_admin' ? ' (' + campusName(f.campus) + ')' : '')), f.role !== 'super_admin' ? h('li', null, 'Manages: ' + (secs || 'no sections yet')) : null),
+          h('div', { class: 'btnrow' },
+            h('button', { class: 'btn primary', type: 'button', onclick: async () => {
+              box.remove(); go.hidden = false; go.disabled = true; go.textContent = 'Creating\u2026';
+              try {
+                await B.createAdmin(f); made = true;
+                form.hidden = true; go.hidden = true;
+                out.replaceChildren(h('div', { class: 'a-ok' }, `${f.full_name} is now ${PP.auth.ROLE_LABEL[f.role]}. Give them this to sign in:`),
+                  h('p', null, h('strong', null, 'Email: '), f.email, h('br'), h('strong', null, 'Password: '), h('span', { class: 'mono' }, f.password)),
+                  h('div', { class: 'btnrow' }, h('button', { class: 'btn small', type: 'button', onclick: () => { try { navigator.clipboard.writeText(`${f.email}\t${f.password}`); toast('Copied'); } catch (e) { toast('Copy by hand.', true); } } }, 'Copy'), h('button', { class: 'btn', type: 'button', onclick: close }, 'Done')));
+              } catch (e) { err.textContent = e.message; err.hidden = false; go.disabled = false; go.textContent = 'Create admin'; }
+            } }, 'Confirm and create'),
+            h('button', { class: 'btn', type: 'button', onclick: () => { box.remove(); go.hidden = false; } }, 'Go back')));
+        go.hidden = true; out.replaceChildren(box);
+      });
+      const mf = (l, el) => h('label', { class: 'af' }, h('span', { class: 'af-l' }, l), el);
+      const form = h('div', { class: 'a-form' }, mf('Full name', nm), mf('Email (used to sign in)', em), mf('Password (minimum 8 characters)', pw), mf('Role', role), cw, secBox, err, h('div', { class: 'btnrow' }, go, h('button', { class: 'btn', type: 'button', onclick: close }, 'Close')));
+      ov.append(h('div', { class: 'a-card wide', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Add an admin' },
+        h('button', { class: 'a-x', type: 'button', 'aria-label': 'Close', onclick: close }, '\u00d7'),
+        h('h2', { class: 'a-title' }, 'Add an admin'), h('p', { class: 'a-sub' }, 'No sign-up needed. You create the account and set the password.'), form, out));
+      document.body.append(ov); setTimeout(() => nm.focus(), 30);
+    }
+    body.replaceChildren(pageHead('Admins', 'Who can open this portal, and what they can see.', [h('button', { class: 'btn primary small', onclick: addAdminDialog }, 'Add an admin'), refreshBtn()]),
       h('section', { class: 'panel' }, h('h2', null, 'Current admins'),
         h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl-a stack-sm' }, h('thead', null, h('tr', null, ['Name', 'Role', 'Can see', 'Manages', ''].map((x) => h('th', null, x)))),
           h('tbody', null, admins.map((p) => h('tr', null,
@@ -535,7 +587,7 @@
             h('td', { 'data-label': 'Can see' }, p.role === 'campus_admin' ? campusName(p.admin_campus) + ' campus' : p.role === 'section_admin' ? 'Only their sections' : 'All campuses'),
             h('td', { 'data-label': 'Manages' }, p.role === 'super_admin' ? 'Everything' : ((D.adminSecs[p.id] || []).map((id) => D.secById[id]).filter(Boolean).map(secLabel).join(', ') || '\u2014')),
             h('td', { class: 'act' }, p.id === me.id ? h('small', { class: 'sub' }, 'You cannot change your own role') : h('span', { class: 'btnrow' }, h('button', { class: 'btn small', onclick: () => roleDialog(p) }, 'Change'), h('button', { class: 'btn small danger', onclick: async () => { if (!confirm(`Remove admin access from ${p.full_name}? They will become a normal learner.`)) return; try { await B.setRole(p.id, 'student', null); await ensure(true); toast('Admin removed'); PP.admin.rerender(); } catch (e) { toast(e.message, true); } } }, 'Remove'))))))))),
-      h('section', { class: 'panel' }, h('h2', null, 'Add an admin'), h('p', { class: 'adm-sub' }, 'The person must first create an account on the site. Then find them here and choose their role.'), search, results));
+      h('section', { class: 'panel' }, h('h2', null, 'Already have an account?'), h('p', { class: 'adm-sub' }, 'To make an existing learner an admin, find them here and choose their role. For anyone new, use the Add an admin button above.'), search, results));
     find();
   }
 

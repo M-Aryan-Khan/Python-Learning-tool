@@ -106,6 +106,7 @@ PP.backend = (function () {
       async myManagedSections() { const { data } = await sb.auth.getUser(); return ok(await sb.from('admin_sections').select('section_id').eq('user_id', data.user.id)).map((r) => r.section_id); },
       async listAdminSections() { return all(() => sb.from('admin_sections').select('user_id,section_id').order('user_id').order('section_id')); },
       async setSections(userId, ids) { ok(await sb.rpc('admin_set_sections', { p_user: userId, p_sections: ids })); },
+      async createAdmin(f) { return ok(await sb.rpc('admin_create_admin', { p_email: f.email, p_password: f.password, p_name: f.full_name, p_role: f.role, p_campus: f.campus || null, p_sections: f.sections || [] })); },
       async createStudent(f) { return ok(await sb.rpc('admin_create_student', { p_email: f.email, p_password: f.password, p_name: f.full_name, p_gr: f.gr_number, p_section: f.section_id })); },
       async setRole(userId, role, campus) { ok(await sb.rpc('admin_set_role', { p_user: userId, p_role: role, p_campus: campus || null })); },
       async updateProfile(userId, f) { ok(await sb.rpc('admin_update_profile', { p_user: userId, p_name: f.full_name, p_gr: f.gr_number || null, p_status: f.school_status, p_campus: f.campus || null, p_section: f.section_id || null, p_active: f.active })); },
@@ -305,6 +306,23 @@ PP.backend = (function () {
       async myManagedSections() { load(); const m = me(); return delay(db.admin_sections.filter((a) => a.user_id === m.id).map((a) => a.section_id)); },
       async listAdminSections() { load(); needSuper(); return delay(db.admin_sections.map((a) => Object.assign({}, a))); },
       async setSections(userId, ids) { load(); needSuper(); const t = db.profiles.find((p) => p.id === userId); if (!t || t.role === 'student') throw new Error('That person is not an admin.'); db.admin_sections = db.admin_sections.filter((a) => a.user_id !== userId).concat(ids.filter((id) => db.sections.some((s) => s.id === id)).map((id) => ({ user_id: userId, section_id: id }))); save(); },
+      async createAdmin(f) {
+        load(); needSuper();
+        const email = String(f.email || '').trim().toLowerCase();
+        if (!['super_admin', 'coordinator', 'campus_admin', 'section_admin'].includes(f.role)) throw new Error('Unknown role.');
+        if (f.role === 'campus_admin' && !f.campus) throw new Error('A campus admin needs a campus.');
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('That email address is not valid.');
+        if (String(f.full_name || '').trim().length < 2) throw new Error('Name too short.');
+        if (String(f.password || '').length < 8) throw new Error('Password too short (at least 8 characters).');
+        if (db.users.some((u) => u.email === email)) throw new Error('That email address already has an account.');
+        const user = { id: uid(), email, password: f.password, verified: true };
+        db.users.push(user);
+        createProfile(user, { full_name: f.full_name });
+        const pr = db.profiles.find((p) => p.id === user.id);
+        pr.role = f.role; pr.admin_campus = f.role === 'campus_admin' ? f.campus : null;
+        if (f.role !== 'super_admin') (f.sections || []).forEach((id) => { if (db.sections.some((x) => x.id === id)) db.admin_sections.push({ user_id: user.id, section_id: id }); });
+        save(); return delay(user.id);
+      },
       async createStudent(f) {
         load(); const m = me();
         if (!canManageSec(m, f.section_id)) throw new Error('You cannot add learners to that section.');

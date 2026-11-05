@@ -373,6 +373,43 @@ begin
   return v_id;
 end $$;
 
+-- Create an ADMIN's account straight away (super admin only): no sign-up, no e-mail code.
+create or replace function public.admin_create_admin(p_email text, p_password text, p_name text, p_role text, p_campus text, p_sections uuid[])
+returns uuid language plpgsql security definer set search_path = public, extensions, auth as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_email text := lower(trim(coalesce(p_email, '')));
+begin
+  if not public.is_super() then raise exception 'only the super admin can add admins'; end if;
+  if p_role not in ('super_admin', 'coordinator', 'campus_admin', 'section_admin') then raise exception 'unknown role'; end if;
+  if p_role = 'campus_admin' and (p_campus is null or not exists (select 1 from public.campuses where code = p_campus)) then raise exception 'a campus admin needs a campus'; end if;
+  if length(v_email) > 200 or v_email !~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' then raise exception 'that email address is not valid'; end if;
+  if length(trim(coalesce(p_name, ''))) < 2 then raise exception 'name too short'; end if;
+  if length(coalesce(p_password, '')) < 8 then raise exception 'password too short (at least 8 characters)'; end if;
+  if length(p_password) > 72 then raise exception 'password too long (at most 72 characters)'; end if;
+  if exists (select 1 from auth.users u where lower(u.email) = v_email) then raise exception 'an account with that email already exists'; end if;
+
+  insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+                          raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+                          confirmation_token, recovery_token, email_change_token_new, email_change)
+  values ('00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated', v_email,
+          extensions.crypt(p_password, extensions.gen_salt('bf', 10)), now(),
+          '{"provider":"email","providers":["email"]}'::jsonb,
+          jsonb_build_object('full_name', left(trim(p_name), 80)),
+          now(), now(), '', '', '', '');
+
+  insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+  values (gen_random_uuid(), v_id, jsonb_build_object('sub', v_id::text, 'email', v_email, 'email_verified', true),
+          'email', v_id::text, now(), now(), now());
+
+  update public.profiles set role = p_role::public.app_role, admin_campus = case when p_role = 'campus_admin' then p_campus end where id = v_id;
+  if p_role <> 'super_admin' then
+    insert into public.admin_sections (user_id, section_id)
+      select v_id, s.id from public.sections s where s.id = any(coalesce(p_sections, '{}'::uuid[]));
+  end if;
+  return v_id;
+end $$;
+
 -- ---------- one-row-per-student summary for the admin lists (respects the same security rules) ----------
 create or replace view public.student_summary with (security_invoker = true) as
 select p.id as user_id,
@@ -417,10 +454,12 @@ revoke all on function public.can_manage_section(uuid) from public, anon;
 revoke all on function public.can_manage_user(uuid) from public, anon;
 revoke all on function public.admin_set_sections(uuid, uuid[]) from public, anon;
 revoke all on function public.admin_create_student(text, text, text, text, uuid) from public, anon;
+revoke all on function public.admin_create_admin(text, text, text, text, text, uuid[]) from public, anon;
 grant execute on function public.can_manage_section(uuid) to authenticated;
 grant execute on function public.can_manage_user(uuid) to authenticated;
 grant execute on function public.admin_set_sections(uuid, uuid[]) to authenticated;
 grant execute on function public.admin_create_student(text, text, text, text, uuid) to authenticated;
+grant execute on function public.admin_create_admin(text, text, text, text, text, uuid[]) to authenticated;
 grant execute on function public.admin_set_password(uuid, text) to authenticated;
 
 -- =====================================================================

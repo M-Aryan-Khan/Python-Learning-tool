@@ -356,6 +356,19 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
   window.addEventListener('resize', () => { if (window.innerWidth > 900) setMenu(false); });
 
+  /* ---------- top navigation: admins get Dashboard / Student view, learners get the course links ---------- */
+  const NAV_HTML = document.getElementById('topnav').innerHTML;
+  function buildNav(area) {
+    const nav = document.getElementById('topnav');
+    const adm = !!(PP.auth && PP.auth.ready && PP.auth.isAdmin);
+    const mode = adm ? (area === 'admin' ? 'admin' : 'student') : 'plain';
+    if (nav.dataset.mode === mode) return;
+    nav.dataset.mode = mode;
+    if (mode === 'plain') nav.innerHTML = NAV_HTML;
+    else if (mode === 'admin') nav.innerHTML = '<a href="#/admin" data-r="admin">Dashboard</a><a href="#/" data-r="student">Student view</a>';
+    else nav.innerHTML = '<a href="#/admin" data-r="admin">Dashboard</a><a class="navsep" aria-hidden="true"></a>' + NAV_HTML;
+  }
+
   /* ---------- router ---------- */
   function renderRoute() {
     PP.ui.editors.length = 0;
@@ -364,6 +377,7 @@
     const r = hash.split('/');
     const area = r[1] || '';
     setMenu(false);
+    buildNav(area);
     document.querySelectorAll('#topnav a').forEach((a) => a.classList.toggle('on', a.dataset.r === (area === '' ? 'home' : area)));
     const hasSide = area === 'learn' && r[2];
     side.style.display = hasSide ? '' : 'none';
