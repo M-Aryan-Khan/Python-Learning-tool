@@ -301,7 +301,7 @@
   }
 
   function showCode(title, r) {
-    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) ov.remove(); } },
+    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov && e.offsetX < e.target.clientWidth && e.offsetY < e.target.clientHeight) ov.remove(); } },
       h('div', { class: 'a-card wide', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Submitted code' },
         h('button', { class: 'a-x', type: 'button', 'aria-label': 'Close', onclick: () => ov.remove() }, '×'),
         h('h2', { class: 'a-title' }, title), h('p', { class: 'a-sub' }, `Last code saved by the learner · ${r.completed_at ? 'passed' : 'not passing yet'} · ${r.attempts} attempt${r.attempts === 1 ? '' : 's'}`),
@@ -313,7 +313,7 @@
   function genPassword() { const w = 'abcdefghjkmnpqrstuvwxyz', d = '23456789'; const pick = (set, n) => Array.from({ length: n }, () => set[Math.floor(Math.random() * set.length)]).join(''); return pick(w, 5) + '-' + pick(d, 3) + pick(w, 2); }
   function passwordDialog(p) {
     const pw = h('input', { class: 'ain mono', value: genPassword(), spellcheck: 'false', autocomplete: 'off', 'aria-label': 'New password' });
-    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) ov.remove(); } });
+    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov && e.offsetX < e.target.clientWidth && e.offsetY < e.target.clientHeight) ov.remove(); } });
     const note = h('div', { class: 'a-ok', hidden: true }, 'Done. Give this password to the learner. They are signed out of other devices and can change it under My progress.');
     const go = h('button', { class: 'btn primary', onclick: async () => {
       if (pw.value.length < 8) return toast('Use at least 8 characters.', true);
@@ -336,7 +336,7 @@
     const secs = manageableSections();
     if (!secs.length) { toast('You have no sections to add students to.', true); return; }
     const secSel = h('select', { class: 'ain', 'aria-label': 'Section' }, secs.map((s) => h('option', { value: s.id }, secLabel(s))));
-    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) done(); } });
+    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov && e.offsetX < e.target.clientWidth && e.offsetY < e.target.clientHeight) done(); } });
     let created = 0;
     function done() { ov.remove(); if (created) { D.at = 0; ensure(true).then(() => PP.admin.rerender()); } }
     const one = { name: h('input', { class: 'ain', maxlength: 80, placeholder: 'Full name', 'aria-label': 'Full name' }), email: h('input', { class: 'ain', type: 'email', placeholder: 'student@example.com', 'aria-label': 'Email' }), gr: h('input', { class: 'ain', maxlength: 30, placeholder: 'e.g. 2401', 'aria-label': 'GR number' }), pw: h('input', { class: 'ain mono', value: genPassword(), 'aria-label': 'Password' }) };
@@ -512,7 +512,7 @@
       const syncRole = () => { cw.hidden = role.value !== 'campus_admin'; secBox.hidden = role.value === 'super_admin'; };
       role.addEventListener('change', syncRole);
       syncRole();
-      const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) ov.remove(); } });
+      const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov && e.offsetX < e.target.clientWidth && e.offsetY < e.target.clientHeight) ov.remove(); } });
       const go = h('button', { class: 'btn primary', onclick: async () => {
         go.disabled = true;
         try {
@@ -543,7 +543,7 @@
       role.addEventListener('change', syncRole); syncRole();
       const err = h('div', { class: 'a-err', hidden: true, role: 'alert' });
       const out = h('div');
-      const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) close(); } });
+      const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov && e.offsetX < e.target.clientWidth && e.offsetY < e.target.clientHeight) close(); } });
       let made = false;
       function close() { ov.remove(); if (made) { D.at = 0; ensure(true).then(() => PP.admin.rerender()); } }
       const go = h('button', { class: 'btn primary', type: 'button' }, 'Create admin');

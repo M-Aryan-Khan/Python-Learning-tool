@@ -103,7 +103,7 @@
     ctx = ctx || {};
     lastFocus = document.activeElement;
     if (!modal) {
-      modal = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === modal) closeModal(); } });
+      modal = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === modal && e.offsetX < e.target.clientWidth && e.offsetY < e.target.clientHeight) closeModal(); } });
       document.body.append(modal);
       document.body.classList.add('modal-open');
     }
@@ -274,7 +274,7 @@
     const a = h('input', { class: 'ain', type: 'password', autocomplete: 'new-password', placeholder: 'New password (minimum 8 characters)', 'aria-label': 'New password' });
     const b = h('input', { class: 'ain', type: 'password', autocomplete: 'new-password', placeholder: 'Type it again', 'aria-label': 'Repeat new password' });
     const err = h('div', { class: 'a-err', hidden: true, role: 'alert' });
-    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) ov.remove(); } });
+    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov && e.offsetX < e.target.clientWidth && e.offsetY < e.target.clientHeight) ov.remove(); } });
     const go = h('button', { class: 'btn primary', type: 'button' }, 'Change password');
     go.addEventListener('click', async () => {
       err.hidden = true;
