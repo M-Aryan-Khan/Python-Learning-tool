@@ -469,3 +469,7 @@ select.sel { font: inherit; font-size: 14px; padding: 5px 8px; border: 1px solid
 .stdin-chip { display: inline-flex; align-items: baseline; gap: 4px; }
 .stdin-chip small { color: var(--ink-3); }
 .stdin-chip code { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 1px 8px; }
+
+/* a finished activity: green border and header so it is easy to spot */
+.act.done { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok); }
+.act.done .act-head { background: var(--ok-soft); border-bottom-color: var(--ok-line); }
