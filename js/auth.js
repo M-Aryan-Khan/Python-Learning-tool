@@ -270,6 +270,28 @@
   }
 
   /* ---------------------------------------------------------------- header user menu */
+  function passwordDialog() {
+    const a = h('input', { class: 'ain', type: 'password', autocomplete: 'new-password', placeholder: 'New password (minimum 8 characters)', 'aria-label': 'New password' });
+    const b = h('input', { class: 'ain', type: 'password', autocomplete: 'new-password', placeholder: 'Type it again', 'aria-label': 'Repeat new password' });
+    const err = h('div', { class: 'a-err', hidden: true, role: 'alert' });
+    const ov = h('div', { class: 'a-overlay', onmousedown: (e) => { if (e.target === ov) ov.remove(); } });
+    const go = h('button', { class: 'btn primary', type: 'button' }, 'Change password');
+    go.addEventListener('click', async () => {
+      err.hidden = true;
+      const fail = (m) => { err.textContent = m; err.hidden = false; };
+      if (a.value.length < 8) return fail('Use at least 8 characters.');
+      if (a.value !== b.value) return fail('The two passwords are not the same.');
+      go.disabled = true;
+      try { await B.changePassword(a.value); ov.remove(); const t = h('div', { class: 'toast', role: 'status' }, 'Password changed'); document.body.append(t); setTimeout(() => t.classList.add('on'), 10); setTimeout(() => t.remove(), 3200); }
+      catch (e) { fail(B.friendly ? B.friendly(e) : e.message); go.disabled = false; }
+    });
+    ov.append(h('div', { class: 'a-card', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Change password' },
+      h('button', { class: 'a-x', type: 'button', 'aria-label': 'Close', onclick: () => ov.remove() }, '×'),
+      h('h2', { class: 'a-title' }, 'Change password'), h('p', { class: 'a-sub' }, 'No email code is needed while you are signed in.'),
+      h('div', { class: 'a-form' }, a, b, err, h('div', { class: 'btnrow' }, go, h('button', { class: 'btn', type: 'button', onclick: () => ov.remove() }, 'Cancel')))));
+    document.body.append(ov); setTimeout(() => a.focus(), 30);
+  }
+
   function initials(name) { return String(name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?'; }
   auth.mountMenu = function (slot) {
     let closeMenu = () => {};
@@ -287,6 +309,7 @@
       const menu = h('div', { class: 'a-menu', role: 'menu', hidden: true },
         h('div', { class: 'a-menu-h' }, h('strong', null, label), h('span', null, auth.roleLine()), p && p.school_status === 'claimed' ? h('em', null, 'Waiting for your teacher to confirm') : null),
         auth.isAdmin ? h('a', { href: '#/admin', role: 'menuitem', onclick: () => close() }, 'Admin dashboard') : h('a', { href: '#/me', role: 'menuitem', onclick: () => close() }, 'My progress'),
+        h('button', { type: 'button', role: 'menuitem', onclick: () => { close(); passwordDialog(); } }, 'Change password'),
         h('button', { type: 'button', role: 'menuitem', onclick: async () => { close(); await B.signOut(); if (B.mode === 'supabase') { /* onAuth handles it */ } else adopt(null); location.hash = '#/'; } }, 'Sign out'));
       function close() { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
       closeMenu = close;
