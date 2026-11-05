@@ -12,6 +12,6 @@ window.PP_CONFIG = {
   //          reset their own password by e-mail. Needs Supabase "Confirm email" ON + Brevo SMTP + the code e-mail templates.
   // false = no e-mail at all: people are signed in straight away and the super admin sets forgotten passwords.
   //         Needs Supabase "Confirm email" OFF.
-  // The setting here MUST match the "Confirm email" switch in Supabase.
+  // The setting here MUST match the "Confirm email" switch in Supabase
   emailCodes: true,
 };
