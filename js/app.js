@@ -39,6 +39,15 @@
     if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
   }
 
+  /* ---------- accounts ---------- */
+  const userSlot = document.getElementById('userSlot');
+  if (userSlot) {
+    if (PP.backend.mode === 'demo') userSlot.before(h('span', { class: 'demo-pill', title: 'No database is connected. Accounts and data stay in this browser.' }, 'DEMO'));
+    PP.auth.mountMenu(userSlot);
+  }
+  PP.auth.onChange(() => { const y = window.scrollY; renderRoute(); window.scrollTo(0, y); });
+  PP.auth.init().then(() => renderRoute());
+
   /* ---------- runner status pill ---------- */
   PP.onRunnerState((s, msg) => {
     const pill = document.getElementById('pystate');
@@ -176,7 +185,11 @@
     }
     updateProg();
     const refresh = PP.ui.renderBlocks(l, mount);
-    if (!PP.lessonItems(l).length) PP.store.markDone(l.id);
+    PP.sync.currentLesson = l.id;
+    if (PP.auth.user) {
+      PP.sync.view(l.id);
+      if (!PP.lessonItems(l).length && !PP.store.isDone(l.id)) { PP.store.markDone(l.id); PP.sync.record({ id: l.id, kind: 'read', passed: true }); }
+    }
 
     const prev = all[idx - 1], next = all[idx + 1];
     page.append(h('nav', { class: 'prev-next' },
@@ -203,6 +216,7 @@
   };
 
   function renderPlay() {
+    if (!PP.auth.user) { view.replaceChildren(PP.auth.lockPage('Playground', 'Sign in to write and run your own Python programs.')); document.title = 'Playground · By Sir Aryan'; return; }
     const saved = PP.store.play || {};
     const state = { code: saved.code != null ? saved.code : TEMPLATES['Input and output'], stdin: saved.stdin || '', files: saved.files || [{ name: 'names.txt', content: 'Asha\nBen\nChloe\n' }] };
     const persist = () => { PP.store.play = { code: card.getCode(), stdin: state.stdin, files: state.files }; };
@@ -242,6 +256,7 @@
 
   /* ---------- past-paper finder ---------- */
   function renderPapers() {
+    if (!PP.auth.user) { view.replaceChildren(PP.auth.lockPage('Past-paper finder', 'Sign in to find past-paper questions and the lessons and practice that go with them.')); document.title = 'Past papers · By Sir Aryan'; return; }
     const data = PP.pastPapers || [];
     const topics = [...new Set(data.map((d) => d.topic))].sort();
     const papers = [...new Set(data.map((d) => d.paper))].sort();
@@ -348,6 +363,8 @@
     else if (area === 'play') renderPlay();
     else if (area === 'papers') renderPapers();
     else if (area === 'explore') renderExplore();
+    else if (area === 'me') { if (!PP.auth.ready) view.replaceChildren(h('p', { class: 'page' }, 'Loading…')); else PP.admin.me(view); document.title = 'My progress · By Sir Aryan'; }
+    else if (area === 'admin') { if (!PP.auth.ready) view.replaceChildren(h('p', { class: 'page' }, 'Loading…')); else PP.admin.render(view, r.slice(1).map((x) => x.split('?')[0])); }
     else if (area === 'ref') renderRef(r[2]);
     else { renderHome(); document.title = 'Python Path · By Sir Aryan'; }
     if (area !== 'learn' || !r[2]) window.scrollTo(0, 0);

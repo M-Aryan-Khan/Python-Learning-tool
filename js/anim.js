@@ -81,9 +81,24 @@
       h('div', { class: 'viz-body' }, cfg.controls ? h('div', { class: 'an-controls' }, cfg.controls) : null, presets, main, edge),
       cfg.caption ? h('figcaption', { class: 'viz-cap', html: ui.rich(cfg.caption) }) : null);
 
+    /* guests may read lessons but not use the interactive tools: lock the animation until they sign in */
+    const lock = h('div', { class: 'an-lock', hidden: true },
+      h('div', { class: 'an-lock-in' },
+        h('strong', null, 'Sign in to use this animation'),
+        h('p', null, 'You can read every lesson without an account. Animations, code running and your progress need a free sign-in.'),
+        h('div', { class: 'an-lock-btns' }, h('button', { class: 'btn primary', onclick: () => PP.auth.openModal('signin') }, 'Sign in'), h('button', { class: 'btn', onclick: () => PP.auth.openModal('signup') }, 'Create an account'))));
+    root.querySelector('.viz-body').append(lock);
+    function syncLock() {
+      const locked = !(PP.auth && PP.auth.user);
+      lock.hidden = !locked;
+      root.classList.toggle('an-locked', locked);
+      root.querySelectorAll('.an-controls, .an-presets, .an-main, .an-edge').forEach((e) => { if (locked) e.setAttribute('inert', ''); else e.removeAttribute('inert'); });
+    }
     function touch() { userTouched = true; }
     function setDur() { root.style.setProperty('--dur', (RM ? 0 : Math.round(420 / speed)) + 'ms'); }
     setDur();
+    syncLock();
+    if (PP.auth) PP.auth.onChange(syncLock);
 
     /* ---------- apply one frame ---------- */
     function applyFrame(f, fast) {

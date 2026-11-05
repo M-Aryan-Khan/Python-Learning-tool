@@ -48,3 +48,8 @@ node tools/build-seo.js https://your-site.vercel.app
 This rewrites the meta tags in `index.html`, creates one crawlable page per lesson in `learn/`, and regenerates
 `sitemap.xml`, `robots.txt` and `site.webmanifest`. Run `node tools/build-seo.js` again after editing lessons, then commit.
 The share image is `og-image.png` (1200 x 630).
+
+## Accounts, progress tracking and the admin portal
+
+Sign-in, saved progress and the admin portal use Supabase (free plan, no e-mail needed). Until it is connected the site
+runs in **demo mode** with sample data in the browser. Setup steps: `backend/SETUP.md`. Database and security rules: `backend/schema.sql`.

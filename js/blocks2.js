@@ -243,6 +243,7 @@
     });
 
     checkBtn.addEventListener('click', () => {
+      if (!PP.auth.gate('check your table')) return;
       let wrong = 0;
       inputs.forEach(({ r, rowIn }) => {
         table.cols.forEach((c) => {
@@ -258,6 +259,7 @@
           if (!ok) wrong++;
         }
       });
+      PP.sync.record({ id, kind: 'tracetable', passed: !wrong });
       if (!wrong) { shell.setDone(); result.replaceChildren(ui.fb('ok', '<strong>Table complete.</strong> ' + ui.rich(b.why || ''))); }
       else { result.replaceChildren(ui.fb('bad', `<strong>${wrong} cell${wrong === 1 ? ' is' : 's are'} wrong or misplaced</strong> (red). Remember: write a value only on the row where it changes, and strings can be written with or without quotes.`)); showBtn.hidden = false; }
     });

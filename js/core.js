@@ -41,24 +41,35 @@ PP.h = function (tag, attrs, ...kids) {
 
 /* ---------- progress (localStorage, always wrapped) ---------- */
 PP.store = (function () {
-  const KEY = 'pythonpath.v1';
+  /* Progress cache. One slot per signed-in student (so a shared lab PC never mixes two students up);
+     the real record lives in the database. Guests have an empty, never-saved slot. */
+  let user = 'guest';
+  const keyFor = (u) => 'pythonpath.v2.' + u;
   let data = { done: {}, code: {}, play: null };
-  try { const raw = localStorage.getItem(KEY); if (raw) data = Object.assign(data, JSON.parse(raw)); } catch (e) { /* private mode */ }
   let timer;
   const listeners = [];
+  function load() {
+    data = { done: {}, code: {}, play: null };
+    if (user === 'guest') return;
+    try { const raw = localStorage.getItem(keyFor(user)); if (raw) data = Object.assign(data, JSON.parse(raw)); } catch (e) { /* private mode */ }
+  }
   function save() {
+    if (user === 'guest') return;
     clearTimeout(timer);
-    timer = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* ignore */ } }, 250);
+    timer = setTimeout(() => { try { localStorage.setItem(keyFor(user), JSON.stringify(data)); } catch (e) { /* ignore */ } }, 250);
   }
   return {
+    get user() { return user; },
+    switchUser(u) { user = u || 'guest'; load(); listeners.forEach((f) => f(null)); },
     isDone: (id) => !!data.done[id],
-    markDone(id) { if (!data.done[id]) { data.done[id] = 1; save(); listeners.forEach((f) => f(id)); } },
+    markDone(id, silent) { if (!data.done[id]) { data.done[id] = 1; save(); if (!silent) listeners.forEach((f) => f(id)); } },
+    bulkDone(ids) { let n = 0; ids.forEach((id) => { if (!data.done[id]) { data.done[id] = 1; n++; } }); if (n) { save(); listeners.forEach((f) => f(null)); } },
     getCode: (id) => data.code[id],
-    setCode(id, c) { data.code[id] = c; save(); },
+    setCode(id, c) { if (user === 'guest') return; data.code[id] = c; save(); },
     clearCode(id) { delete data.code[id]; save(); },
     get play() { return data.play; },
     set play(v) { data.play = v; save(); },
-    reset() { data = { done: {}, code: {}, play: null }; try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ } listeners.forEach((f) => f(null)); },
+    reset() { data = { done: {}, code: {}, play: null }; try { localStorage.removeItem(keyFor(user)); } catch (e) { /* ignore */ } listeners.forEach((f) => f(null)); },
     onChange: (f) => listeners.push(f),
   };
 })();

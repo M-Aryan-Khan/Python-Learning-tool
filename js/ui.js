@@ -225,6 +225,8 @@
     function closeTrace() { if (trace) { trace.close(); trace = null; } }
 
     async function go(mode) {
+      if (!PP.auth.gate(mode === 'trace' ? 'trace your code' : 'run code')) return;
+      if (PP.sync) PP.sync.run();
       token++;
       const my = token;
       con.cancelInput();
@@ -357,6 +359,7 @@
     });
 
     checkBtn.addEventListener('click', async () => {
+      if (!PP.auth.gate('check your answer')) return;
       checkBtn.disabled = true;
       result.replaceChildren(fb('info', 'Checking…'));
       const code = card.getCode();
@@ -397,6 +400,7 @@
         list.append(h('li', { class: res.ok ? 'pass' : 'fail' }, h('span', { class: 'mk' }, res.ok ? '✓' : '✗'), h('div', null, h('div', null, t.hidden ? 'Hidden test ' + n : label), !res.ok && detail)));
       }
       checkBtn.disabled = false;
+      PP.sync.record({ id, kind: b.kind || 'exercise', passed: allOk, code });
       if (allOk) {
         shell.setDone();
         result.replaceChildren(fb('ok', '<strong>All checks passed.</strong> ' + (b.after ? rich(b.after) : 'Well done - this exercise is complete.')), h('div', { style: 'margin:0 16px 14px' }, list));
@@ -437,11 +441,14 @@
       result.append(c.el); c.cm.refresh(); c.run(); runBtn.hidden = true;
     });
     checkBtn.addEventListener('click', async () => {
+      if (!PP.auth.gate('check your answer')) return;
       const exp = await getExpected();
       const got = ta.value;
       tries++;
       const flat = (s) => PP.norm(s).split('\n').map((l) => l.replace(/[ \t]+/g, ' ').trim()).join('\n');
-      if (flat(got) === flat(exp)) {
+      const okp = flat(got) === flat(exp);
+      PP.sync.record({ id, kind: 'predict', passed: okp, code: got });
+      if (okp) {
         shell.setDone(); showRun();
         result.replaceChildren(fb('ok', '<strong>Correct.</strong> ' + (b.why ? rich(b.why) : 'You traced it exactly right.')));
       } else {
@@ -481,10 +488,12 @@
     const btn = h('button', { class: 'btn primary' }, 'Check');
     shell.el.append(h('div', { class: 'act-actions' }, btn), result);
     btn.addEventListener('click', () => {
+      if (!PP.auth.gate('check your answer')) return;
       const want = new Set(multi ? b.answer : [b.answer]);
       const got = new Set(inputs.filter((x) => x.checked).map((x) => +x.value));
       if (!got.size) { result.replaceChildren(fb('info', 'Choose an answer first.')); return; }
       const ok = want.size === got.size && [...want].every((x) => got.has(x));
+      PP.sync.record({ id, kind: 'quiz', passed: ok });
       inputs.forEach((inp, i) => {
         const li = inp.closest('li'); li.className = '';
         if (ok && want.has(i)) li.classList.add('right');
@@ -512,6 +521,7 @@
     const btn = h('button', { class: 'btn primary' }, 'Check');
     shell.el.append(h('div', { class: 'act-actions' }, btn), result);
     btn.addEventListener('click', () => {
+      if (!PP.auth.gate('check your answer')) return;
       let ok = true, blank = false;
       sels.forEach(({ sel, row, it }) => {
         const want = typeof it.cat === 'number' ? it.cat : b.cats.indexOf(it.cat);
@@ -519,6 +529,7 @@
         if (sel.value === '') { blank = true; ok = false; return; }
         if (+sel.value === want) row.classList.add('right'); else { row.classList.add('wrong'); ok = false; }
       });
+      if (!blank) PP.sync.record({ id, kind: 'sort', passed: ok });
       if (blank) result.replaceChildren(fb('info', 'Choose a category for every row first.'));
       else if (ok) { shell.setDone(); result.replaceChildren(fb('ok', '<strong>All correct.</strong> ' + rich(b.why || ''))); }
       else result.replaceChildren(fb('bad', 'Some are wrong (red). ' + (b.hint ? rich(b.hint) : 'Change them and check again.')));
@@ -559,7 +570,9 @@
     const btn = h('button', { class: 'btn primary' }, 'Check order');
     shell.el.append(h('div', { class: 'act-actions' }, btn), result);
     btn.addEventListener('click', () => {
+      if (!PP.auth.gate('check your answer')) return;
       const ok = order.every((v, i) => v === i);
+      PP.sync.record({ id, kind: 'parsons', passed: ok });
       draw(true);
       if (ok) { shell.setDone(); result.replaceChildren(fb('ok', '<strong>Correct order.</strong> ' + rich(b.why || ''))); }
       else result.replaceChildren(fb('bad', 'Green lines are in the right place, red ones are not. Remember: indentation shows which lines belong inside a block.'));
