@@ -464,3 +464,8 @@ select.sel { font: inherit; font-size: 14px; padding: 5px 8px; border: 1px solid
 
 .chip.share { cursor: pointer; font: inherit; font-size: 12.5px; background: var(--bg); }
 .chip.share:hover { border-color: var(--accent); color: var(--accent); }
+
+.stdin-note { margin: 10px 0 2px; padding: 9px 12px; border: 1px dashed var(--line-2); border-radius: 8px; background: var(--panel); font-size: 14.5px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.stdin-chip { display: inline-flex; align-items: baseline; gap: 4px; }
+.stdin-chip small { color: var(--ink-3); }
+.stdin-chip code { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 1px 8px; }

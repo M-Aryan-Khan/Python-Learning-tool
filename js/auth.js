@@ -152,7 +152,7 @@
 
   /* ---- sign up ---- */
   function viewSignUp(card) {
-    head(card, 'Create your account', EMAIL_CODES ? 'It takes a minute. We will email you a 6-digit code to confirm your address.' : 'It takes a minute. You can start learning straight away.');
+    head(card, 'Create your account', EMAIL_CODES ? 'It takes a minute. We will email you a 8-digit code to confirm your address.' : 'It takes a minute. You can start learning straight away.');
     const name = text('text', 'name', 'Your full name', { autocomplete: 'name', maxlength: 80 });
     const email = text('email', 'email', 'you@example.com', { autocomplete: 'email', inputmode: 'email' });
     const pw = passwordField('Choose a password', 'new-password', { autocomplete: 'new-password' }, PW_RULE + ' Use something you will remember.');
@@ -208,8 +208,8 @@
 
   /* ---- verify e-mail code ---- */
   function viewVerify(card, ctx) {
-    head(card, 'Check your email', `We sent a 6-digit code to ${ctx.email}. Type it below. It can take a minute to arrive; check spam too.`);
-    const code = text('text', 'code', '123456', { inputmode: 'numeric', maxlength: 8, class: 'ain a-code', autocomplete: 'one-time-code' });
+    head(card, 'Check your email', `We sent a 8-digit code to ${ctx.email}. Type it below. It can take a minute to arrive; check spam too.`);
+    const code = text('text', 'code', '12345678', { inputmode: 'numeric', maxlength: 8, class: 'ain a-code', autocomplete: 'one-time-code' });
     const err = errBox();
     const ok = h('div', { class: 'a-ok', hidden: true });
     const go = h('button', { class: 'btn primary lg a-full', type: 'submit' }, 'Confirm');
@@ -228,7 +228,7 @@
         if (ctx.fromSignIn && ctx.password && !auth.user) await B.signIn(ctx.email, ctx.password);
         closeModal();
       } catch (ex) { showErr(err, ex.message); } finally { if (modal) busy(go, false, 'Confirm'); }
-    } }, field('6-digit code', code), ok, err, go);
+    } }, field('8-digit code', code), ok, err, go);
     card.append(form, h('div', { class: 'a-links' }, resend, h('button', { class: 'a-link', type: 'button', onclick: () => auth.openModal('signup') }, 'Use a different email')));
   }
 
@@ -240,7 +240,7 @@
         h('div', { class: 'a-links' }, h('button', { class: 'a-link', type: 'button', onclick: () => auth.openModal('signin', { email: ctx.email }) }, 'Back to sign in')));
       return;
     }
-    head(card, 'Reset your password', 'Enter your email and we will send a 6-digit code.');
+    head(card, 'Reset your password', 'Enter your email and we will send a 8-digit code.');
     const email = text('email', 'email', 'you@example.com', { autocomplete: 'email', inputmode: 'email', value: ctx.email || '' });
     const err = errBox();
     const go = h('button', { class: 'btn primary lg a-full', type: 'submit' }, 'Send code');
@@ -255,7 +255,7 @@
 
   function viewReset(card, ctx) {
     head(card, 'Choose a new password', `Enter the code we sent to ${ctx.email} and your new password.`);
-    const code = text('text', 'code', '123456', { inputmode: 'numeric', maxlength: 8, class: 'ain a-code', autocomplete: 'one-time-code' });
+    const code = text('text', 'code', '12345678', { inputmode: 'numeric', maxlength: 8, class: 'ain a-code', autocomplete: 'one-time-code' });
     const pw = passwordField('New password', 'new-password', { autocomplete: 'new-password' }, PW_RULE);
     const err = errBox();
     const go = h('button', { class: 'btn primary lg a-full', type: 'submit' }, 'Save password');
@@ -266,7 +266,7 @@
       busy(go, true, 'Save password');
       try { await B.confirmReset(ctx.email, code.value.trim(), pw.input.value); closeModal(); }
       catch (ex) { showErr(err, ex.message); } finally { if (modal) busy(go, false, 'Save password'); }
-    } }, field('6-digit code', code), pw.el, err, go));
+    } }, field('8-digit code', code), pw.el, err, go));
   }
 
   /* ---------------------------------------------------------------- header user menu */

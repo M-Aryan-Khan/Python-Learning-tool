@@ -1,6 +1,6 @@
 # Connecting Python Path to Supabase + Brevo (free)
 
-The site runs in **demo mode** (sample data, e-mail code always `123456`) until you connect it. Everything below is on free plans.
+The site runs in **demo mode** (sample data, e-mail code always `12345678`) until you connect it. Everything below is on free plans.
 
 You have already done: Supabase project + `schema.sql`. What is left: the **section update**, **Brevo**, the **Supabase e-mail settings**, and **pasting the keys**.
 
@@ -68,7 +68,7 @@ Note: `admin_create_student` writes straight into Supabase's auth tables. It was
 4. **Authentication → Rate Limits → "Rate limit for sending emails"**: raise it to about **100 per hour** (default for custom SMTP is 30, which a class signing up together will exceed). Brevo's own daily limit is 300.
 5. **Authentication → Providers → Email**: **Confirm email = ON**, **Minimum password length = 8**, save.
 
-## 4. Supabase: make the e-mails contain the 6-digit code
+## 4. Supabase: make the e-mails contain the 8-digit code
 
 By default Supabase e-mails a *link*. We use a *code*, so edit two templates:
 **Authentication → Emails → Templates**.

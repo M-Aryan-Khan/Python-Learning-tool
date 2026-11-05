@@ -200,6 +200,11 @@
   }
 
   /* ---------- the runnable code card ---------- */
+  ui.stdinNote = function (list) {
+    return h('div', { class: 'stdin-note' }, h('strong', null, list.length === 1 ? 'The user types: ' : 'The user types, in order: '),
+      list.map((v, i) => h('span', { class: 'stdin-chip' }, h('small', null, list.length > 1 ? (i + 1) + '.' : ''), h('code', null, String(v) === '' ? '(just Enter)' : String(v)))));
+  };
+
   ui.codeCard = function (o) {
     const startCode = o.code;
     const saved = o.id ? PP.store.getCode(o.id) : undefined;
@@ -215,7 +220,8 @@
     if (o.extra) o.extra.forEach((x) => tools.append(x));
     if (o.reset !== false) tools.append(resetBtn);
     const head = o.title || o.sub ? h('div', { class: 'card-head' }, o.title && h('span', { class: 'ttl' }, o.title), o.sub && h('span', { class: 'sub' }, o.sub)) : null;
-    const card = h('div', { class: 'card' }, head, body, tools, con.el);
+    const note = Array.isArray(o.stdin) && o.stdin.length ? ui.stdinNote(o.stdin) : null;
+    const card = h('div', { class: 'card' }, head, body, note, tools, con.el);
 
     let cm, token = 0, currentRun = null, trace = null;
 
@@ -419,6 +425,7 @@
     shell.body.append(h('div', { html: rich(b.question || 'Read the code carefully and type exactly what it will print. Do not run it first!') }));
     const card = ui.codeCard({ code: b.code, readOnly: true, showRun: false, trace: false, reset: false });
     shell.body.append(card.el);
+    if (b.stdin && b.stdin.length) shell.body.append(ui.stdinNote(b.stdin));
     const ta = h('textarea', { class: 'ans', rows: Math.min(8, Math.max(2, (b.rows || 3))), placeholder: 'Type the output here, one line per print', 'aria-label': 'Your predicted output', spellcheck: 'false' });
     shell.body.append(ta);
     const result = h('div');

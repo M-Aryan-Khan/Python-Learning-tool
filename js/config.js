@@ -8,7 +8,7 @@ window.PP_CONFIG = {
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnamNybWd3YXNxdnd0eG5ydHlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM4NTMzNDIsImV4cCI6MjEwOTQyOTM0Mn0.CbElAOVjzTJkPiNFnbpjirhaOsDgwl0ZfkP3pt1hUh0',
   school: 'Beacon Light Academy',
 
-  // true  = sign-up asks for a 6-digit code e-mailed through Brevo (see backend/SETUP.md, step 3), and students can
+  // true  = sign-up asks for a 8-digit code e-mailed through Brevo (see backend/SETUP.md, step 3), and students can
   //          reset their own password by e-mail. Needs Supabase "Confirm email" ON + Brevo SMTP + the code e-mail templates.
   // false = no e-mail at all: people are signed in straight away and the super admin sets forgotten passwords.
   //         Needs Supabase "Confirm email" OFF.

@@ -126,7 +126,7 @@ PP.backend = (function () {
     const SKEY = 'pp.demo.session';
     const uid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'u' + Math.random().toString(36).slice(2) + Date.now().toString(36));
     const now = () => new Date().toISOString();
-    const DEMO_CODE = '123456';
+    const DEMO_CODE = '12345678';
     let db = null;
     let listeners = [];
     let pending = {};   // email -> {kind, meta, password}

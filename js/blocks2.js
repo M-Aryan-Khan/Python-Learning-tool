@@ -211,6 +211,7 @@
     shell.body.append(h('div', { html: ui.rich(b.prompt || 'Work through the program line by line. In each row, write a variable\'s value only in the row where it **changes**, and anything printed in the Output column. Leave other cells empty.') }));
     const card = ui.codeCard({ code: b.code, readOnly: true, trace: false, reset: false });
     shell.body.append(card.el);
+    if (b.stdin && b.stdin.length) shell.body.append(ui.stdinNote(b.stdin));
     const holder = h('div', { class: 'tt-fill' }, h('p', { style: 'color:var(--ink-3)' }, 'Preparing the table…'));
     shell.body.append(holder);
     const result = h('div');
