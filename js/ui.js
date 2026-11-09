@@ -377,6 +377,12 @@
         if (bad) allOk = false;
         list.append(h('li', { class: bad ? 'fail' : 'pass' }, h('span', { class: 'mk' }, bad ? '✗' : '✓'), h('div', null, h('div', { html: rich(rq.msg) }))));
       }
+      if (b.compute) {   // the answer must be worked out by the program, not typed inside quotes
+        const lits = (code.match(/(["'])(?:\\.|(?!\1).)*\1/g) || []).join('\n');
+        const typed = (b.tests || []).some((t) => typeof t.out === 'string' && t.out.split('\n').some((ln) => ln.trim().length >= 2 && lits.includes(ln.trim())));
+        if (typed) allOk = false;
+        list.append(h('li', { class: typed ? 'fail' : 'pass' }, h('span', { class: 'mk' }, typed ? '✗' : '✓'), h('div', null, h('div', { html: rich(b.computeMsg || 'Work the answer out with code. Do not type the finished answer inside quotes.') }))));
+      }
       let n = 0;
       for (const t of b.tests || []) {
         n++;

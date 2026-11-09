@@ -169,7 +169,7 @@
             hints: ['`print(name, "is", age)` puts spaces between the three items.']
           },
           {
-            t: 'exercise', id: 'm01-ex-vars2', title: 'Level up', level: 1,
+            t: 'exercise', id: 'm01-ex-vars2', compute: true, title: 'Level up', level: 1,
             prompt: 'A game starts with <code>level = 1</code> and <code>points = 0</code>. Write code to: add 50 to <code>points</code>, add 1 to <code>level</code>, then print the level and the points on two separate lines (level first).',
             starter: C`
               level = 1
@@ -375,7 +375,7 @@
           { t: 'quiz', q: 'What does <code>print(int(9.99))</code> display?', options: ['10', '9', '9.99', '9.0'], answer: 1, why: '`int()` removes the decimal part (truncates). It never rounds up.' },
 
           {
-            t: 'exercise', id: 'm01-ex-types1', title: 'Make it add up', level: 1,
+            t: 'exercise', id: 'm01-ex-types1', compute: true, title: 'Make it add up', level: 1,
             prompt: 'The variables <code>a</code> and <code>b</code> hold numbers stored as text. Print their <strong>numeric</strong> sum (it should print <code>57</code>).',
             starter: C`
               a = "25"
@@ -406,7 +406,7 @@
             hints: ['`+` can only join two strings, so convert the number first.']
           },
           {
-            t: 'exercise', id: 'm01-ex-types3', title: 'Real or whole?', level: 2,
+            t: 'exercise', id: 'm01-ex-types3', compute: true, title: 'Real or whole?', level: 2,
             prompt: 'The variable <code>height</code> holds <code>1.78</code>. Print its type, then print it converted to an integer, on two lines. Expected: <pre>&lt;class \'float\'&gt;\n1</pre>',
             starter: C`
               height = 1.78
@@ -622,7 +622,7 @@
           { t: 'quiz', q: 'Which of these is **always** a float?', options: ['6 // 2', '6 % 4', '6 / 2', '6 * 2'], answer: 2, why: 'Division with `/` always gives a float, even when it divides exactly.' },
 
           {
-            t: 'exercise', id: 'm01-ex-arith1', title: 'Rectangle', level: 1,
+            t: 'exercise', id: 'm01-ex-arith1', compute: true, title: 'Rectangle', level: 1,
             prompt: 'A rectangle has <code>width = 8</code> and <code>height = 5</code>. Print its area on the first line and its perimeter on the second line.',
             starter: C`
               width = 8
@@ -992,6 +992,7 @@
               print(f"{drink} costs £{price:.2f}")
             `,
             tests: [{ out: 'Coffee costs £2.50' }],
+            requires: [{ re: 'f["\'][^\\n]*\\{\\s*drink\\s*\\}', msg: 'Use an f-string that puts the variable `drink` inside curly brackets.' }, { re: '\\{\\s*price\\s*:\\s*\\.2f\\s*\\}', msg: 'Format `price` with two decimals: `{price:.2f}`.' }],
             hints: ['Start the string with `f` and use `{price:.2f}`.']
           },
           {
@@ -1182,7 +1183,7 @@
           },
           {
             t: 'exercise', id: 'm01-ex-rand2', title: 'Hypotenuse', level: 2,
-            prompt: 'Ask for the two shorter sides of a right-angled triangle (floats) and print the hypotenuse rounded to 2 decimal places. Use <code>math.sqrt</code>.',
+            prompt: 'Ask for the two shorter sides of a right-angled triangle (floats) and print the hypotenuse rounded to 2 decimal places (for sides 1 and 1 that is <code>1.41</code>). Use <code>math.sqrt</code>. Either <code>round(x, 2)</code> or <code>f"{x:.2f}"</code> is fine: a whole result may show as <code>5.0</code> or <code>5.00</code>.',
             starter: C`
               import math
               # read a and b, print hypotenuse
@@ -1194,7 +1195,7 @@
               b = float(input("Side b: "))
               print(round(math.sqrt(a ** 2 + b ** 2), 2))
             `,
-            tests: [{ in: ['3', '4'], out: '5.0' }, { in: ['1', '1'], out: '1.41' }, { in: ['5', '12'], out: '13.0', hidden: true }],
+            tests: [{ in: ['3', '4'], anyOf: ['5.0', '5.00'] }, { in: ['1', '1'], out: '1.41' }, { in: ['5', '12'], anyOf: ['13.0', '13.00'], hidden: true }],
             requires: [{ re: 'sqrt', msg: 'Use `math.sqrt`.' }],
             hints: ['hypotenuse = sqrt(a squared plus b squared).']
           },

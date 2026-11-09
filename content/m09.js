@@ -225,7 +225,7 @@
             { text: 'The (red, green, blue) values of a colour', cat: 1 },
           ], why: 'Lists change; tuples are fixed groups; dictionaries look up values by a key.' },
 
-          { t: 'exercise', id: 'm09-ex-stock', title: 'Stock check', level: 1,
+          { t: 'exercise', id: 'm09-ex-stock', compute: true, title: 'Stock check', level: 1,
             prompt: 'Create a dictionary <code>stock</code> with <code>"pens": 20</code> and <code>"books": 5</code>. Add <code>"rulers": 12</code>. Change pens to 18. Then print the dictionary.',
             starter: C`
               stock = {}

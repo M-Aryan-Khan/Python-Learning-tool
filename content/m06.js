@@ -1096,7 +1096,7 @@
           { t: 'quiz', q: 'In <code>students = [["Asha", 15, 62], ["Ben", 14, 45]]</code>, how do you reach Ben\'s score?', options: ['students[1][2]', 'students[2][1]', 'students[1][1]', 'students["Ben"]'], answer: 0, why: 'Ben is row 1 and the score is column 2.' },
 
           {
-            t: 'exercise', id: 'm06-ex-printrecords', title: 'Print the records', level: 1,
+            t: 'exercise', id: 'm06-ex-printrecords', compute: true, title: 'Print the records', level: 1,
             prompt: 'The table <code>items = [["pen", 2], ["book", 5], ["bag", 12]]</code> holds an item name and its price in pounds. Print each as <code>NAME costs £PRICE</code>, for example <code>pen costs £2</code>.',
             starter: C`
               items = [["pen", 2], ["book", 5], ["bag", 12]]
